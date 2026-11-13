@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Softify Studio Master Player (Interactive Terminal & Desktop UI)
+set -eo pipefail
+
+BOLD='\033[1m'
+CYAN='\033[0;36m'
+GOLD='\033[0;33m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+clear
+echo -e "${CYAN}"
+cat << 'EOF'
+       /\
+      /  \        SOFTIFY NEXT-GEN
+     / /\ \       320 Kbps Studio Master Player
+    / /  \ \      Pure Ad-Free CD Audio
+   / /    \ \     Acoustic Engine v0.1-beta
+   \ \    / /
+    \ \  / /
+     \ \/ /
+      \  /
+       \/
+EOF
+echo -e "${NC}"
+
+while true; do
+    echo -e "${BOLD}Select an action:${NC}"
+    echo -e "  ${CYAN}[1]${NC} Search & Play Studio Master (320 Kbps)"
+    echo -e "  ${CYAN}[2]${NC} View Daily Algorithmic Mixes"
+    echo -e "  ${CYAN}[3]${NC} Fetch Synchronized & Romanized Lyrics"
+    echo -e "  ${CYAN}[4]${NC} Softify Wrapped (Listening Stats)"
+    echo -e "  ${CYAN}[5]${NC} Direct 320k Stream Resolver"
+    echo -e "  ${CYAN}[6]${NC} Check for Updates"
+    echo -e "  ${RED}[q]${NC} Exit"
+    echo ""
+    read -p "Enter choice [1-6, q]: " choice
+
+    case "$choice" in
+        1)
+            read -p "Enter song title or artist: " query
+            if [ -n "$query" ]; then
+                echo ""
+                softify search "$query"
+                echo ""
+                read -p "Enter track name or artist to play: " track_name
+                if [ -n "$track_name" ]; then
+                    echo -e "${GOLD}Resolving 320 Kbps Studio Stream...${NC}"
+                    STREAM_URL=$(softify resolve "$track_name" " " | grep "Stream URL:" | awk '{print $3}' || true)
+                    if [ -n "$STREAM_URL" ]; then
+                        echo -e "${GREEN}▶ Playing: ${track_name} (320 Kbps Studio Master AAC)${NC}"
+                        echo -e "${CYAN}Use [q] to stop, [space] to pause, [9]/[0] volume${NC}"
+                        mpv --no-video --term-osd-bar --title="Softify: ${track_name}" "$STREAM_URL" || true
+                    else
+                        echo -e "${RED}Could not resolve stream URL.${NC}"
+                    fi
+                fi
+            fi
+            ;;
+        2)
+            softify mixes
+            ;;
+        3)
+            read -p "Enter song title: " title
+            read -p "Enter artist name: " artist
+            softify lyrics "$title" "$artist"
+            ;;
+        4)
+            softify wrapped
+            ;;
+        5)
+            read -p "Enter song title: " title
+            read -p "Enter artist name: " artist
+            softify resolve "$title" "$artist"
+            ;;
+        6)
+            softify check-update
+            ;;
+        q|Q)
+            echo "Enjoy your studio sound. Goodbye!"
+            exit 0
+            ;;
+        *)
+            echo "Invalid option."
+            ;;
+    esac
+    echo ""
+    read -p "Press Enter to return to menu..."
+    clear
+done
