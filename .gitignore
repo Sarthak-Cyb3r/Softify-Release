@@ -22,3 +22,16 @@ local.properties
 *.env
 *.keystore
 *.jks
+
+# Temporary markdown and scratch files
+INITIAL_PROMPT.md
+*TEMP*.md
+*temp*.md
+*draft*.md
+*DRAFT*.md
+*.scratch.md
+scratch/
+NOTES.md
+notes.md
+TODO_*.md
+*PROMPT*.md

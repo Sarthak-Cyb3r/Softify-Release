@@ -6,6 +6,7 @@
 > 3. **320 KBPS AUDIO FIDELITY FIRST**: Softify Next-Gen guarantees pure studio-grade **320 Kbps AAC / High-Bitrate Audio** across all streaming and offline download pipelines.
 > 4. **BACKEND-FIRST FOCUS (CRITICAL)**: **DO NOT WRITE ANY FRONTEND OR UI CODE AT THIS STAGE.** All immediate effort must be 100% focused on building the **Rust Core Engine** (`softify-core`), its cryptographic decryptors, the 320 Kbps stream resolvers, SQLite FTS5 database, the UniFFI bridge, and the `softify-cli` terminal runner. Frontend (Kotlin Compose Multiplatform) will be built later only after the backend engine is fully tested and verified via `cargo test` and CLI.
 > 5. **OFFLOAD BUILDS & TESTS TO GITHUB CI**: The local development machine has constrained resources. Avoid heavy local release builds or repeated local test compilation loops. Make atomic git commits and push to GitHub (`main`) so GitHub Actions (`.github/workflows/ci.yml`) compiles and executes the test suites on high-performance cloud runners. Check CI status via `gh run list` / `gh run view`.
+> 6. **ZERO TEMPORARY .MD COMMITS (STRICT)**: **NEVER COMMIT OR PUSH TEMPORARY .MD FILES TO GITHUB.** Do not commit prompt files (`INITIAL_PROMPT.md`), scratchpads, meeting logs, review notes, or draft summaries. The Git history and repository must stay completely clean and professional. Only permanent architectural specifications (`README.md`, `AGENTS.md`, and official docs) are permitted in Git.
 
 ---
 
@@ -201,3 +202,4 @@ pub trait SoftifyEngine: Send + Sync {
    * On **Android**: Pass the resolved 320 Kbps stream URL directly to AndroidX `Media3` (`ExoPlayer`). Do NOT build a software audio decoder in Rust for Android.
    * On **Desktop**: Pass the stream to `libmpv` or `VLC` native bindings with MPRIS D-Bus integration.
 5. **TEST-FIRST IMPLEMENTATION**: Every module in `softify-core` must have unit tests executable via `cargo test`.
+6. **NO TEMPORARY MARKDOWN IN GIT**: Never commit scratchpads, prompt files, or temporary `.md` files to GitHub. Only permanent specs (`README.md`, `AGENTS.md`) belong in version control.
