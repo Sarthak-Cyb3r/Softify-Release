@@ -66,8 +66,7 @@ enum Commands {
     },
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     let engine = SoftifyEngineService::new(None)
         .map_err(|e| format!("Engine initialization failed: {e}"))?;
