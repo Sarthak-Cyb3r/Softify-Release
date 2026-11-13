@@ -1,7 +1,7 @@
 //! Listening analytics, telemetry aggregation, and Softify Wrapped engine.
 
-use softify_models::{TrackMetadata, WrappedStats};
-use softify_storage::Database;
+use softify_models::WrappedStats;
+use softify_storage::{Database, StorageError};
 
 /// Analytics and Wrapped calculation engine for Softify Next-Gen.
 #[derive(Clone)]
@@ -15,7 +15,7 @@ impl AnalyticsEngine {
     }
 
     /// Computes full Softify Wrapped statistics from playback history.
-    pub fn compute_wrapped(&self, since_epoch: Option<i64>) -> Result<WrappedStats, rusqlite::Error> {
+    pub fn compute_wrapped(&self, since_epoch: Option<i64>) -> Result<WrappedStats, StorageError> {
         self.db.get_wrapped_stats(since_epoch)
     }
 

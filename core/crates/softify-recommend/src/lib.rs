@@ -7,7 +7,7 @@
 //! - Strict invariant: Muted tracks and artists are NEVER included
 
 use softify_models::{Mix, MixType, Mood, TrackMetadata};
-use softify_storage::Database;
+use softify_storage::{Database, StorageError};
 use std::collections::{HashMap, HashSet};
 
 /// Recommendation engine powering Softify personalized mixes.
@@ -22,7 +22,7 @@ impl RecommendEngine {
     }
 
     /// Verifies if a track or its artist is muted ("Never play again").
-    pub fn is_muted(&self, track: &TrackMetadata) -> Result<bool, rusqlite::Error> {
+    pub fn is_muted(&self, track: &TrackMetadata) -> Result<bool, StorageError> {
         if self.db.is_track_muted(&track.id)? {
             return Ok(true);
         }
@@ -33,7 +33,7 @@ impl RecommendEngine {
     }
 
     /// Generates Daily Mixes 1 through 6 by clustering favorite and recently played artists.
-    pub fn generate_daily_mixes(&self) -> Result<Vec<Mix>, rusqlite::Error> {
+    pub fn generate_daily_mixes(&self) -> Result<Vec<Mix>, StorageError> {
         // Collect candidate tracks from liked songs and playback history
         let liked = self.db.get_liked_songs(100, 0)?;
         let history = self.db.get_playback_history(100)?;
@@ -136,7 +136,7 @@ impl RecommendEngine {
 
     /// Generates Weekly Discovery Mix with tracks related to top artists, excluding tracks
     /// already played in playback history.
-    pub fn generate_weekly_discovery(&self) -> Result<Mix, rusqlite::Error> {
+    pub fn generate_weekly_discovery(&self) -> Result<Mix, StorageError> {
         let history = self.db.get_playback_history(200)?;
         let played_ids: HashSet<String> = history.iter().map(|t| t.id.clone()).collect();
 
@@ -188,7 +188,7 @@ impl RecommendEngine {
     }
 
     /// Generates a curated mood mix matching specific mood profiles.
-    pub fn generate_mood_mix(&self, mood: Mood) -> Result<Mix, rusqlite::Error> {
+    pub fn generate_mood_mix(&self, mood: Mood) -> Result<Mix, StorageError> {
         // Collect catalog and liked tracks
         let liked = self.db.get_liked_songs(100, 0)?;
         let history = self.db.get_playback_history(100)?;
@@ -283,7 +283,7 @@ impl RecommendEngine {
     }
 
     /// Generates all mood mixes (Chill, Workout, Focus, Romance, Party, Melancholy).
-    pub fn generate_all_mood_mixes(&self) -> Result<Vec<Mix>, rusqlite::Error> {
+    pub fn generate_all_mood_mixes(&self) -> Result<Vec<Mix>, StorageError> {
         let moods = [
             Mood::Chill,
             Mood::Workout,
@@ -301,11 +301,27 @@ impl RecommendEngine {
     }
 
     /// Generates full suite of mixes (Daily mixes 1..6, Weekly Discovery, and Mood mixes).
-    pub fn generate_all_mixes(&self) -> Result<Vec<Mix>, rusqlite::Error> {
+    pub fn generate_all_mixes(&self) -> Result<Vec<Mix>, StorageError> {
         let mut all = self.generate_daily_mixes()?;
         all.push(self.generate_weekly_discovery()?);
         all.extend(self.generate_all_mood_mixes()?);
         Ok(all)
+    }
+
+    /// Asynchronously generates Daily Mixes 1..6 on a background thread.
+    pub async fn generate_daily_mixes_async(&self) -> Result<Vec<Mix>, StorageError> {
+        let engine = self.clone();
+        tokio::task::spawn_blocking(move || engine.generate_daily_mixes())
+            .await
+            .map_err(|e| softify_storage::StorageError::ToSqlConversionFailure(Box::new(e)))?
+    }
+
+    /// Asynchronously generates Weekly Discovery Mix on a background thread.
+    pub async fn generate_weekly_discovery_async(&self) -> Result<Mix, StorageError> {
+        let engine = self.clone();
+        tokio::task::spawn_blocking(move || engine.generate_weekly_discovery())
+            .await
+            .map_err(|e| softify_storage::StorageError::ToSqlConversionFailure(Box::new(e)))?
     }
 }
 
