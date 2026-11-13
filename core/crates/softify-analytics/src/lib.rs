@@ -66,7 +66,7 @@ pub fn day_index_to_name(day_idx: u8) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use softify_models::StreamResult;
+    use softify_models::{StreamResult, TrackMetadata};
 
     fn mock_track(id: &str, title: &str, artist: &str, duration_seconds: u32) -> TrackMetadata {
         TrackMetadata {
