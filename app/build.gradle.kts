@@ -74,9 +74,9 @@ compose.desktop {
         mainClass = "com.softify.app.DesktopMainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Deb)
             packageName = "Softify"
-            packageVersion = "0.1.0"
+            packageVersion = "1.0.0"
             description = "Softify Next-Gen Studio Audio Player"
             copyright = "© 2026 Softify"
             vendor = "Softify Studio"
