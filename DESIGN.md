@@ -1,440 +1,456 @@
-# Softify Next-Gen — UI/UX Design Specification & Architecture
+# Softify Next-Gen — UI/UX Design Specification & Architecture Contract
 
-> **Design Theme**: Minimalist, Warm & Cozy, Frosted Studio Glassmorphism  
+> **Aesthetic Direction**: Apple Music macOS Sonoma / iOS 18 Liquid Glassmorphism meets Japanese Zen Minimalism  
 > **Target Framework**: Kotlin Compose Multiplatform (Android & Desktop)  
-> **Native Bridges**: AndroidX `Media3` (ExoPlayer) + Linux MPRIS D-Bus Engine  
-> **Core Typography**: **Outfit** (Headings & Accents) + **Plus Jakarta Sans** (Body & Interface) + **JetBrains Mono** (Timecodes & Metadata)
+> **Native Bridges**: AndroidX `Media3` (ExoPlayer) + Linux MPRIS D-Bus Engine + UniFFI Rust Core  
+> **Audio Quality Baseline**: Bit-perfect 320 Kbps Studio Master AAC (`m4a`)  
+> **Specification Version**: `2.0.0-STABLE`
 
 ---
 
 ## 1. Visual Identity & Design Tokens
 
-### 1.1 Philosophy: "The Cozy Living Room Studio"
-Softify Next-Gen discards noisy advertisements, harsh neon clashes, and cluttered social feeds. It treats the music player as a serene, warm, distraction-free sanctuary. Every screen balances:
-- **Calm Minimalism**: Generous whitespace, razor-sharp hierarchy, and no superfluous visual noise.
-- **Warm & Cozy Ambiance**: Deep velvet obsidian base, warm amber and terracotta undertones, and gentle glow inspired by late-night listening sessions.
-- **Precision Glassmorphism**: Translucent floating surfaces, multi-layer depth, 1px frosted specular borders, and dynamic ambient lighting derived from the active album cover art.
+### 1.1 Philosophy: "Liquid Studio Acoustics"
+Softify Next-Gen discards noisy advertising banners, harsh algorithmic churn, and clashing saturated gradients. It models the player as a serene, dark-mode listening studio built from frosted optical acrylic, subtle specular light refractions, and real-time chromatic atmosphere sampled from active album artwork.
+
+Every element adheres to three non-waivable principles:
+1. **Dynamic Chromatic Atmosphere**: The background canvas is never static. It breathes with an ambient 3-point radial mesh glow derived from the current track's dominant palette, softened across a 60dp Gaussian blur.
+2. **True Optical Glassmorphism**: Cards and floating controls do not use arbitrary solid borders or flat gray containers. They utilize multi-pass blurred acrylic (`backdrop-filter: blur(40dp)`), a 1px top specular bevel highlight simulating physical glass edge catch (`rgba(255, 255, 255, 0.12)`), and deep ambient occlusion shadows.
+3. **Studio Typography & Precision Hierarchy**: Visual hierarchy is anchored in pure weight and optical spacing rather than jarring color shifts. High-fidelity audio data (bitrates, sample frequencies, codecs) is rendered strictly in tabular monospace figures.
 
 ---
 
-### 1.2 Color System & Design Tokens
+### 1.2 Design Token System
+
+All screens and Compose Multiplatform composables must bind strictly to the tokens declared below. Never use hardcoded literals in UI components.
+
+#### A. Color Palette & Glass Materials
+| Token Name | Hex / RGBA Value | Compose Color Def | Semantic Usage |
+| :--- | :--- | :--- | :--- |
+| `Surface-0` | `#050508` | `Color(0xFF050508)` | Deep Obsidian Base Canvas (Pitch black foundation) |
+| `Surface-1` | `rgba(18, 18, 24, 0.65)` | `Color(0xA6121218)` | Persistent Shell Acrylic (Sidebar, Top Bar, Bottom Nav) with 40dp blur |
+| `Surface-2` | `rgba(255, 255, 255, 0.05)` | `Color(0x0DFFFFFF)` | Floating Glass Cards, Track Item Rows, Dialog Containers |
+| `Surface-3` | `rgba(255, 255, 255, 0.10)` | `Color(0x1AFFFFFF)` | Elevated Pills, Active Chips, Filter Bar Buttons, Search Inputs |
+| `Glass-Highlight` | `rgba(255, 255, 255, 0.12)` | `Color(0x1FFFFFFF)` | 1px Top Bevel Border (Specular light refraction on glass edges) |
+| `Glass-Shadow` | `rgba(0, 0, 0, 0.40)` | `Color(0x66000000)` | Diffused Ambient Shadow below floating glass sheets |
+| `Accent-Primary` | `#FA243C` | `Color(0xFFFA243C)` | Apple Music Crimson (Primary Play Buttons, Active Sliders, Selected Tab) |
+| `Accent-Hover` | `#FC3C44` | `Color(0xFFFC3C44)` | Interactive Hover/Press Tint for Primary Actions |
+| `Accent-Studio` | `#F59E0B` | `Color(0xFFF59E0B)` | Studio Master Gold (320 Kbps High-Bitrate Badge, Hi-Res Indicators) |
+| `Text-Primary` | `#FFFFFF` | `Color(0xFFFFFFFF)` | Track Titles, Primary Screen Headings, Modal Headlines (100%) |
+| `Text-Secondary`| `#8E8E93` | `Color(0xFF8E8E93)` | Artist Names, Section Labels, Tab Bar Inactive Items (60%) |
+| `Text-Tertiary` | `#48484A` | `Color(0xFF48484A)` | Secondary Durations, Track Numbers, File Codecs, Dividers (40%) |
+| `Status-Online` | `#34C759` | `Color(0xFF34C759)` | Cached Offline Ready (Green frosted indicator dot) |
+| `Status-Danger` | `#FF453A` | `Color(0xFFFF453A)` | Mute/Block Track, Destructive Purge Cache, Disconnect |
+
+#### B. Typography Matrix
+| Token | Typeface Family | Weight | Size | Line Height | Tracking |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `Display-Hero` | SF Pro Display / Inter Tight | Bold (700) | 34sp | 40sp | -0.6sp |
+| `Title-Large` | SF Pro Display / Inter Tight | SemiBold (600)| 24sp | 30sp | -0.4sp |
+| `Title-Medium` | SF Pro Display / Inter Tight | Medium (500) | 18sp | 24sp | -0.2sp |
+| `Body-Primary` | SF Pro Text / Plus Jakarta Sans| Regular (400) | 15sp | 20sp | 0sp |
+| `Body-Emphasis`| SF Pro Text / Plus Jakarta Sans| SemiBold (600)| 15sp | 20sp | 0sp |
+| `Caption` | SF Pro Text / Plus Jakarta Sans| Regular (400) | 12sp | 16sp | +0.1sp |
+| `Caption-Bold` | SF Pro Text / Plus Jakarta Sans| SemiBold (600)| 11sp | 14sp | +0.4sp |
+| `Code-Meta` | SF Mono / JetBrains Mono | Medium (500) | 12sp | 16sp | 0sp (Tabular) |
+| `Lyrics-Active`| SF Pro Display / Inter Tight | Bold (700) | 26sp | 34sp | -0.3sp |
+| `Lyrics-Idle` | SF Pro Display / Inter Tight | Medium (500) | 22sp | 30sp | -0.2sp |
+
+#### C. Elevation, Radius & Micro-Motion Physics
+- **Radius Scale**:
+  - `Radius-XS` (`6dp`): Tooltips, mini quality tags, status dots.
+  - `Radius-SM` (`10dp`): Search input box, filter chips, equalizer fader caps.
+  - `Radius-MD` (`16dp`): Album art cards, song list hover items, dialog popups.
+  - `Radius-LG` (`24dp`): Fullscreen Now Playing container, Wrapped stats cards, Bottom Sheet drawer.
+  - `Radius-Pill` (`999dp`): Primary play buttons, search badges, volume sliders, track scrubbing pills.
+- **Spring Physics**:
+  - All interactive tap and press states use Compose `spring(dampingRatio = 0.78f, stiffness = 380f)`.
+  - Button press state dynamically scales down to `0.97f` with instant response.
+  - Page transitions use cross-fade with `220ms` duration and `FastOutSlowInEasing`.
+  - Sheet slide-ups animate via `spring(dampingRatio = 0.82f, stiffness = 420f)`.
+
+---
+
+## 2. Adaptive Framework Architecture
+
+Softify Next-Gen supports both mobile and desktop platforms seamlessly:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        COZY GLASS COLOR PALETTE                        │
-├──────────────────────┬─────────────┬───────────────────────────────────┤
-│ Token                │ Hex / RGBA  │ Description & Usage               │
-├──────────────────────┼─────────────┼───────────────────────────────────┤
-│ --bg-base            │ #0A0A12     │ Deep velvet obsidian canvas       │
-│ --bg-surface-glass   │ #161524BF   │ 75% translucent surface glass     │
-│ --bg-card-glass      │ #1E1C3080   │ 50% frosted card container        │
-│ --bg-overlay-modal   │ #0D0C17E6   │ 90% blur backdrop for modals      │
-│ --accent-amber       │ #F59E0B     │ Warm cozy amber glow              │
-│ --accent-studio-green│ #10B981     │ 320 Kbps studio master badge      │
-│ --accent-terracotta  │ #E07A5F     │ Warm highlights & like indicators │
-│ --text-primary       │ #FAF7F2     │ Cozy warm cream (contrast > 12:1) │
-│ --text-secondary     │ #A8A29E     │ Muted warm stone gray             │
-│ --text-tertiary      │ #78716C     │ Subtle captions & timecodes       │
-│ --glass-border       │ #FFFFFF1A   │ 1px subtle specular rim highlight │
-│ --glass-border-focus │ #F59E0B4D   │ Active focus glass outline        │
-└──────────────────────┴─────────────┴───────────────────────────────────┘
-```
-
-#### Ambient Backdrop Lighting Formula
-When a track is playing, the background renders a fluid multi-color gradient bleed derived from the dominant and secondary colors of the album art:
-- Layer 0: Solid `--bg-base` (`#0A0A12`)
-- Layer 1: Two radial gradient light orbs (radius `320dp`, blur `90dp`, opacity `18%`, animated with a slow 12-second sinusoidal drift)
-- Layer 2: Full-screen frosted glass overlay (`backdrop-filter: blur(40dp)`)
-
----
-
-### 1.3 Typography System
-
-| Role | Font Family | Weight | Size (dp/sp) | Tracking | Line Height |
-|---|---|---|---|---|---|
-| **Display Hero** | **Outfit** | SemiBold (600) | 36sp | -0.5px | 44sp |
-| **Title Large** | **Outfit** | Medium (500) | 24sp | -0.2px | 32sp |
-| **Title Medium** | **Outfit** | SemiBold (600) | 18sp | 0px | 24sp |
-| **Body Large** | **Plus Jakarta Sans** | Regular (400) | 16sp | +0.1px | 24sp |
-| **Body Medium** | **Plus Jakarta Sans** | Regular (400) / Medium (500) | 14sp | +0.15px | 20sp |
-| **Caption / Label** | **Plus Jakarta Sans** | Medium (500) | 12sp | +0.3px | 16sp |
-| **Timecode / Meta** | **JetBrains Mono** | Regular (400) | 11sp | 0px | 14sp |
-
----
-
-### 1.4 Glass Surface Components
-
-Every glass component follows a 3-layer compositing rule:
-1. **Backdrop Blur**: `RenderEffect.createBlurEffect(16f, 16f)` on Android 12+ / Compose Desktop Skia blur shader.
-2. **Surface Fill**: Translucent dark acrylic (`rgba(22, 21, 36, 0.70)`).
-3. **Specular Rim Stroke**: `1.dp` border with a linear gradient from top-left (`rgba(255, 255, 255, 0.15)`) to bottom-right (`rgba(255, 255, 255, 0.03)`).
-
----
-
-## 2. Screen-by-Screen In-Depth UI Architecture
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        APPLICATION NAVIGATION MAP                      │
-├────────────────────────────────────────────────────────────────────────┤
-│  [ Home ] ─── [ Search ] ─── [ Library ] ─── [ Insights/Wrapped ]      │
-│      │             │              │                  │                 │
-│      └─────────────┴──────┬───────┴──────────────────┘                 │
-│                           │                                            │
-│                 [ Mini-Player Dock ]                                   │
-│                           │ (Tap to Expand)                            │
-│                 [ Full Now Playing Player ]                            │
-│                 ├── Synced Lyrics Sheet (with Romanization)            │
-│                 ├── 10-Band Studio Equalizer                           │
-│                 ├── Sleep Timer Modal                                  │
-│                 └── Audio Queue Sheet                                  │
+│               COMPOSE MULTIPLATFORM PRESENTATION LAYER                 │
+│                                                                        │
+│   DESKTOP (Linux / macOS / Windows)            ANDROID (Mobile / Tablet)│
+│   • Persistent Left Glass Nav (240dp)          • Bottom Frosted Bar (68dp)│
+│   • Top Search & Ambient Header (56dp)        • Gesture Pull Sheets     │
+│   • Persistent Bottom Player Bar (88dp)        • Floating Mini Player (64dp)│
+│   • Linux MPRIS D-Bus Integration              • AndroidX Media3 Service │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ ViewModel State Flow
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                    UNIFIED MULTIPLATFORM STATE FLOW                    │
+│   • PlayerState (Track, Position, Buffer, Bitrate, PlaybackStatus)     │
+│   • LibraryState (LikedTracks, CustomPlaylists, MutedList, Offline)    │
+│   • SearchState (FTS5 Realtime Results, QueryHistory, Filters)         │
+│   • AmbientPaletteState (Dominant, Secondary, Vibrant, DarkVibrant)    │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ UniFFI Bridge Callbacks
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                      RUST CORE ENGINE WORKSPACE                        │
+│   softify-core • softify-resolvers • softify-storage • softify-crypto   │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Screen 1: Home Dashboard ("The Living Room")
+## 3. Screen-by-Screen Blueprint Specifications
 
-The entry point greets the user with warm, personalized listening hubs and instant 1-tap playback.
-
-#### 1. Top Glass Header
-- **Greeting**: Time-aware greeting (`"Good morning, Sarthak"` / `"Quiet evening"`) in `Outfit Medium 22sp`.
-- **Status Indicator**: Right-aligned pill badge: `● 320k Studio Ready` in `Studio Green` with a subtle pulsing dot.
-- **Settings / GitHub Update Pill**: Gear icon and subtle update indicator with version badge.
-
-#### 2. Quick-Listen 6-Grid (Top Favorites)
-- 2 rows × 3 columns of compact frosted glass cards (`height: 56dp`).
-- Left: `48dp` rounded square artwork (`radius: 8dp`).
-- Center: Track/Playlist title in `Plus Jakarta Sans SemiBold 13sp` (single-line ellipsis).
-- Right: Subtle hover/pressed glowing Play button (`accent-amber`).
-- **Interaction**: Tap anywhere on the card immediately begins playback without navigating away.
-
-#### 3. Daily Mixes Carousel (Mixes 1 to 6)
-- Horizontal snapping carousel of cards (`width: 160dp`, `height: 220dp`, `corner: 20dp`).
-- Card layout:
-  - Top: Album art collage or stylized minimalist generative pattern.
-  - Middle: `"Daily Mix 1"` in `Outfit SemiBold 16sp`.
-  - Bottom: Artist tags (e.g. `"The Weeknd, Daft Punk, Gesaffelstein"`) in `text-secondary 12sp`.
-  - Ambient glass glow behind each card matching the mix's primary genre palette.
-
-#### 4. Mood Stations Shelf (Horizontal Pills)
-- Horizontal chip row: `[ ☕ Cozy Acoustic ] [ 🌙 Midnight Drift ] [ ⚡ High Voltage ] [ 🧘 Deep Focus ] [ 🌧️ Melancholy ]`.
-- Selecting a mood immediately cross-fades the recommendations and generates a 25-track smart mood mix on the fly.
-
-#### 5. "Jump Back In" Session Shelf
-- Horizontal list of the user's recently paused albums and playlists with a miniature horizontal progress bar beneath the artwork showing remaining duration.
-
----
-
-### Screen 2: Search & Discovery (Multi-Source Hub)
-
-#### 1. Floating Glass Search Bar (Sticky Top)
-- Glass capsule (`height: 52dp`, `corner: 26dp`, border `1px solid rgba(255,255,255,0.12)`).
-- Leading: Search magnifying glass icon (`text-secondary`).
-- Placeholder: `"Search songs, artists, or paste YouTube/Spotify link..."`
-- Trailing:
-  - Clear icon (when text is present).
-  - Quick `"Paste Link"` button that auto-detects clipboard URLs.
-
-#### 2. Universal Link Drop & Direct Player
-- If the user enters or pastes:
-  - **YouTube Link** (`https://youtu.be/...` or `youtube.com/watch?v=...`):
-    - Instantly renders a **"Direct YouTube Stream"** preview card showing video title, channel name, thumbnail, and a prominent `[ Play Audio Only (320k/Opus) ]` button.
-  - **Spotify Playlist Link** (`https://open.spotify.com/playlist/...`):
-    - Instantly renders an **"Import Spotify Playlist"** card with track count preview and `[ Import to Local Library ]` action.
-
-#### 3. Live FTS5 Search Results
-- **Category Filter Tabs**: `All`, `Tracks`, `Artists`, `Albums`, `Playlists`.
-- **Top Result Card (Glass Hero)**:
-  - Large `72dp` artwork with soft back-glow.
-  - Title in `Outfit SemiBold 18sp` + Artist in `Plus Jakarta Sans 14sp`.
-  - `"Studio Master 320k"` badge.
-  - Instant Play floating action button.
-- **Track List Rows**:
-  - `48dp` artwork thumbnail.
-  - Title, Artist, Album, and duration formatted in `JetBrains Mono 12sp`.
-  - Overflow menu `(⋮)`: *Like, Add to Playlist, Download 320k Offline, Never Play Again (Mute)*.
-
----
-
-### Screen 3: Now Playing Screen (Full Studio Player & Lyrics)
-
-The centerpiece of Softify. Designed with breathtaking depth, fluid motion, and zero clutter.
+### Screen 1: Home & Discovery Hub (`/home`)
 
 ```
-┌────────────────────────────────────────────────────────┐
-│ [▼ Minimize]          NOW PLAYING          [⋯ Options] │
-├────────────────────────────────────────────────────────┤
-│                                                        │
-│                    ┌─────────────┐                     │
-│                    │             │                     │
-│                    │  ALBUM ART  │ (Ambient Color      │
-│                    │  [320x320]  │  Bleed Behind)      │
-│                    │             │                     │
-│                    └─────────────┘                     │
-│                                                        │
-│  Blinding Lights                          [ ♥ Liked ]  │
-│  The Weeknd • After Hours                              │
-│  [ STUDIO MASTER 320 KBPS AAC ]                        │
-│                                                        │
-│  ───────●────────────────────────────────────────────  │
-│  01:14                                          03:20  │
-│                                                        │
-│       [ 🔀 ]    [⏮]    [  ▶  ]    [⏭]    [ 🔁 ]        │
-│                                                        │
-├────────────────────────────────────────────────────────┤
-│  [📜 Synced Lyrics]    [🎚️ Equalizer]    [🌙 Sleep 30m] │
-└────────────────────────────────────────────────────────┘
-```
-
-#### 1. Artwork & Ambient Stage
-- Centerpiece: `320dp × 320dp` artwork with `24dp` rounded corners and subtle specular rim.
-- Elevation: Dynamic shadow matching dominant art color with `40dp` spread at 25% opacity.
-- Fluid vinyl rotation animation (optional toggle) or gentle pulsing breathing animation.
-
-#### 2. Track Meta & Quality Indicator
-- Title: `Outfit SemiBold 24sp`, auto-scrolling marquee if text overflows.
-- Artist & Album: `Plus Jakarta Sans 16sp` with interactive artist link.
-- **Studio Fidelity Pill**:
-  - `[ 320 KBPS AAC • STUDIO MASTER ]` rendered in frosted glass with emerald green typography (`#10B981`) and a discrete waveform icon.
-  - Tap opens the **Audio Stream Inspector** showing actual CDN URL, container (`m4a`), codec (`aac`), sample rate (`44.1 kHz`), and provider (`jiosaavn_studio_320k`).
-
-#### 3. Waveform Scrubber & Controls
-- **Scrub Bar**: Smooth pill-shaped slider with buffer progress track in translucent white, played progress in warm amber, and glowing thumb knob.
-- Time indicators: Left elapsed time, right total duration in `JetBrains Mono 12sp`.
-- **Playback Control Deck**:
-  - Shuffle (`🔀`), Previous (`⏮`), Play/Pause (`▶` / `⏸`), Next (`⏭`), Repeat (`🔁`).
-  - Play/Pause Button: Large `68dp` floating glass circle with radial amber glow and smooth 150ms spring scale animation on press.
-
-#### 4. Quick Action Dock
-- **Like Button (Heart)**: Toggles filled terracotta heart with particle pop animation.
-- **Mute Track ("Never Play Again")**: Discrete slash-circle icon. Prompts: *"Mute this track from all future mixes and autoplay?"*
-- **Lyrics Drawer Toggle**: Slides up the full synchronized lyrics sheet.
-- **Equalizer Button**: Opens the 10-band audio studio.
-- **Sleep Timer Button**: Displays active countdown (e.g. `"24m remaining"`).
-
----
-
-### Screen 4: Synchronized Lyrics & Romanization Sheet
-
-A cozy, full-height karaoke-style typography canvas.
-
-#### 1. Dual-Mode Lyrics Header
-- Left: Song Title & Artist.
-- Right: **Romanization Mode Switcher**:
-  - `[ Original ]` (e.g., Devanagari, Hangul, Kanji)
-  - `[ Romanized (Romaji / Hinglish) ]` (English alphabet phonetic translation)
-- Close / Minimize drawer handle at top.
-
-#### 2. Real-Time Lyrics Viewport
-- Auto-scrolls synchronously with audio playback to keep the active line dead center.
-- **Active Line Styling**:
-  - Font: `Outfit SemiBold 26sp`.
-  - Color: `#FAF7F2` (100% white-cream) with a soft text glow (`text-shadow: 0 0 16px rgba(245, 158, 11, 0.4)`).
-  - Background: Subtle frosted spotlight capsule behind the active line.
-- **Inactive Lines**:
-  - Font: `Plus Jakarta Sans Regular 18sp`.
-  - Color: `rgba(255, 255, 255, 0.35)`.
-  - Blur: Soft `1.5px` depth-of-field blur on lines further away from center.
-- **Interactive Scrub-to-Line**:
-  - Tapping any lyric line instantly seeks audio playback to that exact timestamp tag (`[mm:ss.xx]`).
-
----
-
-### Screen 5: Library & Playlists ("The Vault")
-
-#### 1. Hero Liked Songs Card
-- Full-width glass banner with an angled gradient heart backdrop.
-- `"Liked Songs"` in `Outfit SemiBold 22sp`.
-- Total tracks count and total playtime in minutes.
-- Quick `"Shuffle All Liked Songs"` button.
-
-#### 2. Spotify 1-Click Importer Sheet
-- Prominent banner: `"Import any Spotify Playlist in seconds with Zero Rate Limits"`.
-- Action opens glass modal:
-  - Input: Paste Spotify URL (`https://open.spotify.com/playlist/...`).
-  - Real-time progress bar: `"Imported 142 of 210 tracks..."`.
-  - Complete: Automatically saves playlist into local SQLite and begins instant 320k stream resolution in the background.
-
-#### 3. Custom Playlists & Offline Downloads
-- Tabs: `Playlists`, `Artists`, `Albums`, `Downloaded (Offline 320k)`.
-- Create Playlist button: Pops minimalist glass dialog requesting Title and Description.
-- Downloaded Shelf: Filter exclusively for offline-ready cached `.m4a` files for flight/no-signal mode.
-
----
-
-### Screen 6: 10-Band Studio Equalizer (DSP Suite)
-
-Allows audiophiles to tune the output profile for headphones, car audio, or studio monitors.
-
-```
-┌────────────────────────────────────────────────────────┐
-│ [← Back]           10-BAND STUDIO EQUALIZER            │
-├────────────────────────────────────────────────────────┤
-│  PRESET: [ Acoustic Cozy ▼ ]     [✓ EQ Enabled]        │
-│                                                        │
-│  +12dB ──                                              │
-│          ▲       ▲                                     │
-│   0dB ───┼───▲───┼───▲───▲───────▲───▲───────▲───────  │
-│          ▼   ▼   ▼   ▼   ▼   ▲   ▼   ▼   ▲   ▼         │
-│  -12dB ──────────────────────▼───────────▼───────────  │
-│        31Hz 63Hz 125 250 500 1k  2k  4k  8k  16kHz     │
-│                                                        │
-├────────────────────────────────────────────────────────┤
-│  BASS BOOST: ─────●────── [ +4 dB ]                    │
-│  VIRTUALIZER: ──●──────── [ Off ]                      │
-└────────────────────────────────────────────────────────┘
-```
-
-#### 1. Interactive Frequency Sliders
-- 10 vertical sliders: `31Hz`, `63Hz`, `125Hz`, `250Hz`, `500Hz`, `1kHz`, `2kHz`, `4kHz`, `8kHz`, `16kHz`.
-- Range: `-12.0 dB` to `+12.0 dB` with central 0dB snap notch.
-- Fluid Bézier response curve connecting slider thumbs in real time.
-
-#### 2. Presets Carousel
-- Quick preset chips: `Flat`, `Acoustic Cozy`, `Deep Bass`, `Vocal Warmth`, `Late Night`, `Electronic`, `Rock`, `Club`.
-- Custom preset saving: Save custom slider configurations to SQLite.
-
-#### 3. DSP Enhancements
-- Pre-amp Gain slider (`-6dB` to `+6dB`).
-- Bass Boost rotary dial.
-- Surround Virtualizer slider.
-
----
-
-### Screen 7: Softify Wrapped (Listening Insights)
-
-A nostalgic, cinematic celebration of the user's personal listening history.
-
-#### Story Slides Carousel
-1. **Slide 1 — Total Time**:
-   - Giant stylized counter in `Outfit SemiBold 48sp`: `"14,280 Minutes of Pure Music"`.
-   - Comparison: *"That's equal to 238 hours of studio-grade sound"*.
-2. **Slide 2 — Top Tracks**:
-   - Number 1 track spotlight with artwork, play count, and first date discovered.
-   - Ranked list: Tracks #1 through #5 with mini audio snippets.
-3. **Slide 3 — Top Artists**:
-   - Top 5 artist portraits in floating hexagonal frosted glass cards.
-   - Percentage breakdown of top listening share.
-4. **Slide 4 — Listening Clock**:
-   - Circular 24-hour heat ring showing when the user streams music most (e.g., peak at 11:30 PM).
-   - Favorite listening day: `"Saturday Night"`.
-5. **Slide 5 — The Audio Persona**:
-   - Evaluates listening clusters to award a custom badge:
-     - *"The Night Owl"* (70%+ listening after 10 PM)
-     - *"The Sonic Explorer"* (High ratio of unique artists)
-     - *"The Acoustic Dreamer"* (Dominant cozy/chill tags)
-   - Share button: Exports a clean glassmorphic `.png` card ready for sharing.
-
----
-
-### Screen 8: Sleep Timer & Night Mode Modal
-
-Designed specifically to avoid waking or blinding the user in a dark room.
-
-- **Presentation**: Half-height frosted glass bottom sheet (`backdrop blur: 24dp`).
-- **Options**:
-  - `[ 15 Minutes ]`
-  - `[ 30 Minutes ]`
-  - `[ 45 Minutes ]`
-  - `[ 1 Hour ]`
-  - `[ End of This Song ]`
-- **Graceful Fade-Out Curve**:
-  - Checkbox enabled by default: *"Graceful 30-second volume fade-out before stopping"*.
-  - Prevents the abrupt cutoff that jolts listeners awake.
-- **Active State Display**:
-  - Subdued countdown timer in the bottom player bar (`🌙 18:42`).
-  - 1-tap `[ +5 min ]` extension button.
-
----
-
-## 3. Desktop Adaptive Layout (Compose for Desktop / Linux)
-
-On large screens (Linux / macOS / Windows), the app transitions from a mobile bottom-nav layout to a spacious studio dashboard:
-
-```
-┌──────────────┬────────────────────────────────────────────────────────┐
-│ SOFTIFY      │  🔍 Search songs, artists, links...        [⚙️] [⬆ v1.0]│
-├──────────────┼────────────────────────────────────────────────────────┤
-│ 🏠 Home      │  GOOD EVENING, SARTHAK                                 │
-│ 🔍 Search    │  ┌──────────────────────────────────────────────────┐  │
-│ 📚 Library   │  │  DAILY MIX 1                     DAILY MIX 2     │  │
-│ ♥ Liked      │  │  [ The Weeknd, Daft Punk ]       [ Taylor Swift ]│  │
-│ 📜 Playlists │  └──────────────────────────────────────────────────┘  │
-│              │                                                        │
-│ PLAYLISTS    │  NOW PLAYING QUEUE                                     │
-│ • Late Night │  1. Blinding Lights • The Weeknd              03:20    │
-│ • Deep Focus │  2. Save Your Tears • The Weeknd              03:35    │
-│ • Cozy Coffee│  3. Starboy • The Weeknd, Daft Punk           03:50    │
-├──────────────┴────────────────────────────────────────────────────────┤
-│ [Art] Blinding Lights  [⏮] [ ▶ ] [⏭]   ──●────────────── 01:14/03:20  │
-│       The Weeknd • 320k              [🎚️ EQ] [📜] [🌙] [🔊 ──────●]  │
+┌────────────────────────────────────────────────────────────────────────┐
+│  Good Evening, Sarthak                     [ 🔍 Search ]  [ ⚙️ Settings ]│
+│  ✨ Studio Master 320k Stream Active                                   │
+│                                                                        │
+│  FOR YOU · DAILY MIXES                                                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
+│  │ Daily Mix 1  │  │ Daily Mix 2  │  │ Daily Mix 3  │  │ Weekly Pick  │ │
+│  │ [The Weeknd] │  │ [Arijit]     │  │ [Hans Zimmer]│  │ [Discover]   │ │
+│  │ ▶ 320k M4A   │  │ ▶ 320k M4A   │  │ ▶ 320k M4A   │  │ ▶ 320k M4A   │ │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘ │
+│                                                                        │
+│  MOOD WAVES                                                            │
+│  [ (⚡ Focus Flow) ]  [ (🌙 Midnight Chill) ]  [ (🔥 Workout Drive) ]   │
+│                                                                        │
+│  RECENTLY PLAYED · STUDIO MASTER QUALITY                               │
+│  ┌──┬─────────────────────────────┬──────────────┬────────────┬──────┐ │
+│  │01│ Starboy                     │ The Weeknd   │ 320 KBPS   │ 3:50 │ │
+│  │02│ Tum Hi Ho                   │ Arijit Singh │ 320 KBPS   │ 4:22 │ │
+│  │03│ Interstellar (Main Theme)   │ Hans Zimmer  │ 320 KBPS   │ 6:40 │ │
+│  └──┴─────────────────────────────┴──────────────┴────────────┴──────┘ │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Left Navigation Rail (`width: 240dp`)**: Frosted acrylic panel with pinned navigation links and custom playlists list.
-- **Center Content Canvas**: Scrollable grid adapting from 2 columns (small window) to 4 columns (ultrawide monitor).
-- **Persistent Bottom Player Bar (`height: 80dp`)**: Always-accessible playback controls, scrub bar, volume slider, and MPRIS D-Bus engine integration.
-- **Linux MPRIS Integration**: Reflects full metadata, cover art URL, and play/pause/next commands to the desktop system tray and lock screen (GNOME / KDE / Hyprland).
+- **Component Hierarchy**:
+  1. `TopAppBar`: Transparent glass app bar with dynamic greeting (`Good Morning` / `Good Afternoon` / `Good Evening`), ambient radial gradient halo behind avatar icon.
+  2. `SectionHeader`: `Title-Medium` text with subtle `Text-Secondary` category counter.
+  3. `DailyMixRow`: Horizontal snapping `LazyRow` featuring `DailyMixCard` composables:
+     - Aspect ratio 1:1 rounded square (`Radius-MD`) with frosted glass overlay.
+     - 4-quadrant dynamic album art montage.
+     - Quick Play floating pill with `Accent-Primary` fill and white play triangle.
+     - Gold `320 KBPS` studio badge pill pinned to top-right corner.
+  4. `MoodChipsRow`: Horizontal scroll of `Surface-3` glass pills (`Radius-Pill`) with 1px `Glass-Highlight` border. Selecting a chip instantly filters dynamic recommendations without navigating away.
+  5. `TrackTable`: Vertically scrollable song list rows with hover glass highlight (`Surface-2`), mono track duration (`Code-Meta`), and quick-action menu (Like, Add to Playlist, Mute Song).
 
 ---
 
-## 4. Accessibility & Micro-Interaction Standards
+### Screen 2: Search & Live Catalog Exploration (`/search`)
 
-1. **Contrast Ratio Compliance**:
-   - All primary text (`#FAF7F2`) on glass surfaces (`#161524`) achieves a contrast ratio of **12.4:1**, well exceeding the WCAG AAA requirement (7:1).
-   - Secondary text (`#A8A29E`) achieves **5.2:1**, exceeding WCAG AA (4.5:1).
-2. **Touch Targets**:
-   - Every interactive icon, button, and slider thumb has a minimum hit target of **48dp × 48dp**, even if the visual icon is 24dp.
-3. **Motion & Transitions**:
-   - Play/Pause transition: `150ms` spring easing.
-   - Screen cross-fades: `250ms` cubic-bezier (`0.2, 0.0, 0.0, 1.0`).
-   - Full support for system **prefers-reduced-motion**: Disables ambient gradient orbs and simplifies transitions to instant opacity fades.
-4. **Haptic Feedback (Android)**:
-   - Subtle tactile tick on slider scrubbing.
-   - Satisfying soft confirmation pulse on Like/Mute action.
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  [ 🔍 Search songs, artists, studio albums, YouTube links...         ] │
+│                                                                        │
+│  FILTERS: [ All ]  [ (Songs) ]  [ (Artists) ]  [ (Playlists) ]         │
+│                                                                        │
+│  MATCHED TRACKS (FTS5 INSTANT RESOLUTION)                              │
+│  ┌───┬────────────────────────────┬─────────────┬───────────┬────────┐ │
+│  │[🖼]│ Blinding Lights            │ The Weeknd  │ 320k M4A  │ [ ▶ ]  │ │
+│  │   │ After Hours (2020)         │ Studio Mast │ AAC Studio│ [ ··· ]│ │
+│  ├───┼────────────────────────────┼─────────────┼───────────┼────────┤ │
+│  │[🖼]│ One Dance                  │ Drake, Kyla │ 320k M4A  │ [ ▶ ]  │ │
+│  │   │ Views (2016)               │ Studio Mast │ AAC Studio│ [ ··· ]│ │
+│  └───┴────────────────────────────┴─────────────┴───────────┴────────┘ │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Component Hierarchy**:
+  1. `SearchBarGlass`:
+     - Height `52dp`, background `Surface-2`, shape `Radius-SM`.
+     - 1px continuous `Glass-Highlight` border.
+     - Real-time debounced (150ms) input binding into `softify-storage` SQLite FTS5 index and JioSaavn 320k network resolver.
+     - Trailing clear icon (`✕`) fading in only when text length $> 0$.
+  2. `FilterChipGroup`: Horizontal segmented glass bar with spring animation on selection indicator pill.
+  3. `LiveSearchResultList`:
+     - Infinite scrolling `LazyColumn` presenting unified search results.
+     - Each item displays:
+       - 48x48dp rounded cover art with cross-fade image caching.
+       - Track title in `Body-Emphasis` (`Text-Primary`).
+       - Artist names with Unicode non-breaking space normalization (`Text-Secondary`).
+       - Studio Fidelity Badge: Frosted amber pill with `320 KBPS` label in `Code-Meta`.
+       - More actions button (`···`) expanding an optical blur context menu:
+         - `Play Next`
+         - `Add to Playlist...`
+         - `Download Offline (320k AAC)`
+         - `Mute Track (Never Play Again)`: Highlighted in `Status-Danger`.
 
 ---
 
-## 5. Technical Implementation Blueprint (Kotlin Compose)
+### Screen 3: Fullscreen Studio Master Player & Synced Lyrics (`/player`)
 
-### 5.1 Color Scheme in Compose
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  [ ⌵ Minimize ]           NOW PLAYING STUDIO           [ 🎚️ Equalizer ]│
+│                                                                        │
+│                     ┌───────────────────────┐                          │
+│                     │                       │                          │
+│                     │                       │   LYRICS DRAWER          │
+│                     │    ALBUM COVER ART    │   (KARAOKE SYNC)         │
+│                     │       (380x380)       │                          │
+│                     │                       │   "I said, ooh, I'm      │
+│                     │                       │    blinded by the        │
+│                     └───────────────────────┘    lights"               │
+│                                                 (Active: White 100%)   │
+│                       Blinding Lights                                  │
+│                          The Weeknd             "No, I can't sleep     │
+│                    [ 320 KBPS · AAC · M4A ]      until I feel your     │
+│                                                  touch"                │
+│       1:24 ━━━━━━━━━━━━━●────────────────────── 3:20                    │
+│                                                                        │
+│              [ 🔀 ]    [ ⏮ ]   [  ▶  ]   [ ⏭ ]    [ 🔁 ]               │
+│                                                                        │
+│       [ 😴 Sleep Timer: 30m ]    [ ❤️ Liked ]    [ 🚫 Mute Track ]     │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Atmospheric Background Engine**:
+  - Live 2-pass background composed of the album art scaled to 150%, blurred with `blur(80dp)`, layered over `Surface-0` (`#050508`).
+  - Subtle breathing gradient animation rotating slowly at 0.05 Hz.
+- **Component Hierarchy**:
+  1. `TopNavigationControls`: Back/Minimize chevron on left, track provider indicator in center, 10-band Equalizer shortcut on right.
+  2. `AlbumArtVibrancyFrame`:
+     - Centered `380x380dp` (desktop) or `300x300dp` (mobile) album art card.
+     - `Radius-LG` corner curvature.
+     - Ambient color drop shadow extending 32dp with 35% opacity.
+  3. `MetadataBlock`:
+     - Track title in `Display-Hero` typography.
+     - Artist and album in `Title-Medium`.
+     - `StudioMasterHUD`: Frosted amber pill displaying `320 KBPS · AAC · 44.1 kHz Studio Master`.
+  4. `ScrubberTimeline`:
+     - Custom liquid scrub bar. Played duration track in `Accent-Primary`, buffered track in `rgba(255, 255, 255, 0.20)`, unplayed track in `rgba(255, 255, 255, 0.08)`.
+     - Current and total timecodes in `Code-Meta` (`SF Mono`).
+  5. `PlaybackControlsDeck`:
+     - Large central Play/Pause circle (`64dp`) filled with `Accent-Primary`, scaling to `0.94f` on click.
+     - Skip Previous (`⏮`) and Skip Next (`⏭`) with smooth tap haptics.
+     - Shuffle (`🔀`) and Repeat (`🔁`) toggles with subtle amber dot indicator when active.
+  6. `SyncedLyricsEngine`:
+     - Side drawer on Desktop; swipe-up full sheet on Mobile.
+     - Supports **Romanized non-English lyrics** mapped side-by-side with localized text.
+     - Auto-scrolls synchronously with millisecond-precision audio timestamps (`[mm:ss.xx]`).
+     - Inactive lines rendered in `Lyrics-Idle` with 30% opacity; active singing line rendered in `Lyrics-Active` with 100% white glow.
+     - Clicking any lyric timestamp instantly seeks playback to that exact audio position.
+
+---
+
+### Screen 4: Library, Liked Songs & Offline Cache (`/library`)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  Your Library                              [ + Create New Playlist ]   │
+│                                                                        │
+│  TABS: [ (Liked Songs 284) ]  [ (Playlists 12) ]  [ (Offline Cached 96) ]│
+│                                                                        │
+│  ┌───────────────────┐  ┌───────────────────┐  ┌───────────────────┐   │
+│  │ ❤️ Liked Tracks   │  │ ⚡ Late Night Drive│  │ 💾 Offline Studio  │   │
+│  │ 284 Studio Tracks │  │ 42 Studio Tracks  │  │ 96 Cached M4A     │   │
+│  │ [ Play All ▶ ]    │  │ [ Play All ▶ ]    │  │ Storage: 1.2 GB   │   │
+│  └───────────────────┘  └───────────────────┘  └───────────────────┘   │
+│                                                                        │
+│  ALL TRACKS                                                            │
+│  ┌──┬────────────────────────────┬─────────────┬───────────┬─────────┐ │
+│  │01│ After Hours                │ The Weeknd  │ ● CACHED  │ 6:01    │ │
+│  │02│ Bohemian Rhapsody          │ Queen       │ ● CACHED  │ 5:55    │ │
+│  └──┴────────────────────────────┴─────────────┴───────────┴─────────┘ │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Component Hierarchy**:
+  1. `LibraryTabBar`: Multi-segment glass switcher filtering between Liked Tracks, User Playlists, and Offline Downloads.
+  2. `PlaylistGrid`: 3-column responsive grid of high-fidelity glass cards:
+     - Card background `Surface-2` with 1px `Glass-Highlight` top border.
+     - Heart badge in `Accent-Primary` for Liked Tracks.
+     - Offline cache status pill with `Status-Online` green dot indicating disk persistence.
+  3. `CachedTrackRow`: Displays local download status, storage footprint, and swipe-to-delete action.
+
+---
+
+### Screen 5: Universal Playlist Importer (`/import`)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  Universal Playlist Importer                                           │
+│  Import unlimited Spotify and YouTube playlists with zero rate limits  │
+│                                                                        │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ 🔗 Paste Spotify or YouTube Playlist URL...             [PASTE]  │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                        │
+│  STATUS: RESOLVING TRACKS AT 320 KBPS                                  │
+│  Progress: [████████████████████████░░░░░░] 78 / 100 Tracks Resolved    │
+│                                                                        │
+│  RESOLVED CANDIDATES                                                   │
+│  ✓ 01. Blinding Lights · The Weeknd       -> JioSaavn Studio 320k AAC  │
+│  ✓ 02. Save Your Tears · The Weeknd       -> JioSaavn Studio 320k AAC  │
+│  ⚠ 03. Rare Indie B-Side · Unknown Artist -> YTM InnerTube Fallback    │
+│                                                                        │
+│  [ (Save as New Playlist) ]              [ (Download All for Offline) ]│
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Component Hierarchy**:
+  1. `UrlInputGlassBox`: Large input bar with auto-detect clipboard button. Supports `open.spotify.com/playlist/...`, `open.spotify.com/album/...`, and `music.youtube.com/playlist?list=...`.
+  2. `LiveResolutionProgressBar`: Two-tone smooth animated progress bar showing real-time batch resolution.
+  3. `CandidateAuditList`: Real-time streaming log of matched tracks with provider badges (`JioSaavn Studio 320k` or `YouTube InnerTube Fallback`).
+  4. `ActionFooter`: Frosted button bar to save to local SQLite database or begin batch offline download.
+
+---
+
+### Screen 6: Softify Wrapped & Audio Persona (`/wrapped`)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  Softify Wrapped · Your Year in High-Fidelity Sound                    │
+│  [ ❚❚ Pause Story ]                                     Story 2 of 5   │
+│                                                                        │
+│         ┌──────────────────────────────────────────────────────┐       │
+│         │               YOUR AUDIO PERSONA                     │       │
+│         │                                                      │       │
+│         │              🔮 THE NIGHT CYCLIST                   │       │
+│         │                                                      │       │
+│         │  You thrive when the world sleeps. 68% of your       │       │
+│         │  listening happens between 11 PM and 4 AM.           │       │
+│         │                                                      │       │
+│         │  • Total Time Streamed: 42,850 Minutes               │       │
+│         │  • Studio Master 320k Fidelity Ratio: 99.4%          │       │
+│         │  • Top Artist: The Weeknd (4,120 mins)               │       │
+│         │  • Top Genre: Synthwave & Melodic R&B                │       │
+│         │                                                      │       │
+│         │  [ 📤 Share Wrapped Card ]   [ ▶ Play Top 100 Songs ]│       │
+│         └──────────────────────────────────────────────────────┘       │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Component Hierarchy**:
+  1. `StoryProgressBar`: Multi-segment top progress bar (5 cards: Minutes Listened, Top Artists, Top Songs, Listening Clock, Audio Persona).
+  2. `WrappedGlassCard`: Fullscreen vertical glass presentation card with dynamic iridescent border and floating typography.
+  3. `ShareButton`: Generates a high-resolution exportable image card formatted for sharing on social channels.
+
+---
+
+### Screen 7: 10-Band Studio Equalizer (`/equalizer`)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  10-Band Studio Parametric Equalizer                  [ Preset: Flat ⌵]│
+│  [ PRESETS: (Flat)  (Bass Boost)  (Acoustic)  (Vocal Polish)  (Studio) ]│
+│                                                                        │
+│  PREAMP: [ +2.5 dB ] ━━━━━━━━●━━━━━━━━━━━━━━━━━━━━━━━━ (+12dB)         │
+│                                                                        │
+│   +12dB ───┬────┬────┬────┬────┬────┬────┬────┬────┬────┬───────────   │
+│            │    │    │    │    │    │    │    │    │    │             │
+│            │   [●]   │    │    │   [●]   │    │    │    │             │
+│    0dB ───[●]───┼───[●]───┼───[●]───┼───[●]───┼───[●]──[●]──────────   │
+│            │    │    │   [●]   │    │    │   [●]   │    │             │
+│   -12dB ───┴────┴────┴────┴────┴────┴────┴────┴────┴────┴───────────   │
+│           32Hz 64Hz 125Hz 250Hz 500Hz 1kHz 2kHz 4kHz 8kHz 16kHz        │
+│                                                                        │
+│  [ (Reset to Flat) ]                              [ (Save Custom) ]    │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Component Hierarchy**:
+  1. `PresetScrollDeck`: Horizontal carousel of quick EQ presets.
+  2. `PreampSlider`: Horizontal gain fader with zero-point detent indicator.
+  3. `FaderDeck10Band`: 10 vertical precision glass faders:
+     - Frequencies: 32 Hz, 64 Hz, 125 Hz, 250 Hz, 500 Hz, 1 kHz, 2 kHz, 4 kHz, 8 kHz, 16 kHz.
+     - Smooth Bezier curve connecting fader nodes in real-time.
+     - Live values displayed in `Code-Meta` format (`+3.2 dB`).
+
+---
+
+### Screen 8: Settings, Storage & GitHub Updater (`/settings`)
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│  Settings & System Preferences                                         │
+│                                                                        │
+│  AUDIO STREAMING FIDELITY                                              │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ Default Stream Quality: [ 320 Kbps Studio Master (AAC)         ⌵]│  │
+│  │ Rewrite Low Bitrates (_96 / _160 to _320.mp4):         [ ON (✓) ]│  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                        │
+│  MUTED & BLOCKED TRACKS ("NEVER PLAY AGAIN")                           │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ 2 Tracks Blocked from all Mixes & Radio                [Manage ⌵]│  │
+│  │ • "Despacito" · Luis Fonsi                       [ Unblock / ✕ ] │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                        │
+│  STORAGE & CACHE MANAGEMENT                                            │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ Offline Track Storage: 1.42 GB (112 Songs)      [ Clear Audio ]  │  │
+│  │ SQLite FTS5 Search Database: 12.8 MB            [ Rebuild Index] │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                                                                        │
+│  APP UPDATES (GITHUB RELEASES)                                         │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │ Current Version: v2.0.0-STABLE (Latest)       [ Check Update 🔄 ]│  │
+│  │ In-App Auto Update Channel: Release Builds             [ Active ]│  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Component Hierarchy**:
+  1. `SettingsSection`: Frosted container (`Surface-2`) grouping related preferences.
+  2. `QualitySelector`: Segmented switch ensuring the 320 Kbps studio stream rewriter remains permanently enforced.
+  3. `MutedTracksManager`: Interactive list of blocked tracks with instant unblock button. Blocked songs are guaranteed never to appear in recommendation mixes.
+  4. `GitHubUpdaterCard`: Displays current commit hash, release tag, and one-tap update download progress.
+
+---
+
+## 4. Compose Multiplatform Implementation Contract
+
+### 4.1 Custom Modifiers for Glassmorphism
+
 ```kotlin
-object SoftifyTheme {
-    val BackgroundBase = Color(0xFF0A0A12)
-    val GlassSurface = Color(0xBF161524)
-    val GlassCard = Color(0x801E1C30)
-    val AccentAmber = Color(0xFFF59E0B)
-    val AccentStudioGreen = Color(0xFF10B981)
-    val AccentTerracotta = Color(0xFFE07A5F)
-    val TextPrimary = Color(0xFFFAF7F2)
-    val TextSecondary = Color(0xFFA8A29E)
-    val GlassBorder = Color(0x1AFFFFFF)
+// Glass Container Modifier with Optical Bevel Highlight
+fun Modifier.glassmorphicSurface(
+    shape: Shape = RoundedCornerShape(16.dp),
+    backgroundColor: Color = Color(0x0DFFFFFF), // Surface-2
+    borderColor: Color = Color(0x1FFFFFFF),     // Glass-Highlight
+    borderWidth: Dp = 1.dp
+): Modifier = this
+    .clip(shape)
+    .background(backgroundColor)
+    .border(width = borderWidth, color = borderColor, shape = shape)
+
+// Spring Touch Feedback Modifier
+fun Modifier.springPress(): Modifier = composed {
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1.0f,
+        animationSpec = spring(
+            dampingRatio = 0.78f,
+            stiffness = 380f
+        )
+    )
+    this
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
+        .pointerInput(Unit) {
+            detectTapGestures(
+                onPress = {
+                    isPressed = true
+                    tryAwaitRelease()
+                    isPressed = false
+                }
+            )
+        }
 }
 ```
 
-### 5.2 Reusable Glass Card Modifier
-```kotlin
-@Composable
-fun Modifier.glassmorphism(
-    cornerRadius: Dp = 20.dp,
-    borderAlpha: Float = 0.12f,
-    backgroundColor: Color = SoftifyTheme.GlassSurface
-): Modifier = this
-    .clip(RoundedCornerShape(cornerRadius))
-    .background(backgroundColor)
-    .border(
-        width = 1.dp,
-        brush = Brush.linearGradient(
-            colors = listOf(
-                Color.White.copy(alpha = borderAlpha),
-                Color.White.copy(alpha = borderAlpha * 0.2f)
-            )
-        ),
-        shape = RoundedCornerShape(cornerRadius)
-    )
-```
-
----
-
-*This specification serves as the official, permanent UI/UX architecture document for Softify Next-Gen.*
+### 4.2 Architectural State Invariants
+1. **Never stall audio playback**: UI rendering runs on the main thread; all crypto decryption, FTS5 queries, and 320k stream resolution execute on background Tokio / Kotlin Coroutine worker threads.
+2. **Dynamic ambient color bleed**: Update `AmbientPaletteState` with a 300ms cross-fade whenever `PlayerState.currentTrack` changes to maintain smooth visual flow.
+3. **Muted songs exclusion**: Any track present in `muted_tracks` table must be omitted from auto-play queues and algorithmic daily mixes without throwing errors.
+4. **Offline indicator reliability**: A track displays the green `Status-Online` dot if and only if the decrypted 320k `.m4a` file exists on the local storage partition.
