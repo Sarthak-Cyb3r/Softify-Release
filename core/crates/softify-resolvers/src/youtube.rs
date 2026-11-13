@@ -1,10 +1,10 @@
-use crate::models::{StreamResult, TrackMetadata};
-use crate::normalizer::{
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
+use softify_crypto::{
     clean_title, is_disqualified_variant, normalize_unicode_spaces, score_duration_proximity,
     token_similarity,
 };
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use softify_models::{StreamResult, TrackMetadata};
 
 const YTM_USER_AGENT: &str =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -78,6 +78,17 @@ impl YouTubeMusicResolver {
         self.resolve_video_stream(&best.video_id).await
     }
 
+    /// Directly extracts audio stream URL from any YouTube video URL or ID.
+    pub async fn extract_video_audio(&self, url_or_id: &str) -> Result<StreamResult, String> {
+        let video_id = Self::extract_youtube_id(url_or_id).ok_or_else(|| {
+            format!("Failed to extract valid 11-character YouTube video ID from: '{url_or_id}'")
+        })?;
+
+        let mut stream = self.resolve_video_stream(&video_id).await?;
+        stream.provider = "youtube_direct".to_string();
+        Ok(stream)
+    }
+
     /// Calls InnerTube player endpoint to extract direct audio playback URL.
     pub async fn resolve_video_stream(&self, video_id: &str) -> Result<StreamResult, String> {
         let body = serde_json::json!({
@@ -107,12 +118,17 @@ impl YouTubeMusicResolver {
             .await
             .map_err(|e| format!("Failed to parse player JSON: {e}"))?;
 
+        Self::parse_player_stream_result(&root)
+    }
+
+    /// Parses player response JSON for the highest bitrate audio format.
+    pub fn parse_player_stream_result(root: &serde_json::Value) -> Result<StreamResult, String> {
         let formats = root
             .pointer("/streamingData/adaptiveFormats")
             .and_then(|f| f.as_array())
             .ok_or_else(|| "No adaptiveFormats found in player response".to_string())?;
 
-        // Filter for audio streams
+        // Filter for audio streams with direct URLs
         let mut audio_streams: Vec<(&serde_json::Value, u64)> = Vec::new();
         for f in formats {
             let mime = f.get("mimeType").and_then(|m| m.as_str()).unwrap_or("");
@@ -154,6 +170,59 @@ impl YouTubeMusicResolver {
             codec,
             provider: "youtube_innertube".to_string(),
         })
+    }
+
+    /// Extracts standard 11-character YouTube video ID from various URL formats or raw ID.
+    pub fn extract_youtube_id(input: &str) -> Option<String> {
+        let trimmed = input.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+
+        // If it's already an 11-char ID without slashes or question marks
+        if trimmed.len() == 11
+            && trimmed
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+        {
+            return Some(trimmed.to_string());
+        }
+
+        // Handle youtu.be/ID
+        if let Some(idx) = trimmed.find("youtu.be/") {
+            let after = &trimmed[idx + "youtu.be/".len()..];
+            let id = after.split(['?', '&', '/', '#']).next().unwrap_or("");
+            if id.len() == 11 {
+                return Some(id.to_string());
+            }
+        }
+
+        // Handle /watch?v=ID or /v/ID or /embed/ID
+        if let Some(idx) = trimmed.find("v=") {
+            let after = &trimmed[idx + 2..];
+            let id = after.split(['&', '#', '/']).next().unwrap_or("");
+            if id.len() == 11 {
+                return Some(id.to_string());
+            }
+        }
+
+        if let Some(idx) = trimmed.find("/embed/") {
+            let after = &trimmed[idx + "/embed/".len()..];
+            let id = after.split(['?', '&', '/', '#']).next().unwrap_or("");
+            if id.len() == 11 {
+                return Some(id.to_string());
+            }
+        }
+
+        if let Some(idx) = trimmed.find("/v/") {
+            let after = &trimmed[idx + "/v/".len()..];
+            let id = after.split(['?', '&', '/', '#']).next().unwrap_or("");
+            if id.len() == 11 {
+                return Some(id.to_string());
+            }
+        }
+
+        None
     }
 
     /// Selects best candidate with Topic Channel (+80 points) prioritization.
@@ -216,10 +285,7 @@ impl YouTubeMusicResolver {
             .map_err(|e| format!("Failed to parse InnerTube JSON: {e}"))?;
 
         let mut candidates = Vec::new();
-
-        // Search recursively for musicResponsiveListItemRenderer
         Self::extract_renderers(&root, &mut candidates);
-
         Ok(candidates)
     }
 
@@ -242,50 +308,46 @@ impl YouTubeMusicResolver {
     }
 
     fn parse_single_renderer(renderer: &serde_json::Value) -> Option<YtCandidate> {
-        // Video ID
         let video_id = renderer
             .pointer("/playlistItemData/videoId")
             .or_else(|| {
-                renderer.pointer("/navigationEndpoint/watchEndpoint/videoId")
-            })
-            .or_else(|| {
-                renderer.pointer("/overlay/musicItemThumbnailOverlayRenderer/content/musicPlayButtonRenderer/playNavigationEndpoint/watchEndpoint/videoId")
+                renderer
+                    .pointer("/doubleTapCommand/watchEndpoint/videoId")
+                    .or_else(|| renderer.pointer("/onTap/watchEndpoint/videoId"))
             })
             .and_then(|v| v.as_str())?
             .to_string();
 
-        // Title from flexColumns[0]
-        let title_runs = renderer
-            .pointer("/flexColumns/0/musicResponsiveListItemFlexColumnRenderer/text/runs")
-            .and_then(|r| r.as_array())?;
-        let title = title_runs
-            .first()
-            .and_then(|r| r.get("text"))
-            .and_then(|t| t.as_str())?;
+        let flex_columns = renderer.get("flexColumns")?.as_array()?;
 
-        // Author from flexColumns[1]
+        // Column 0: Title
+        let title_runs = flex_columns
+            .first()?
+            .pointer("/musicResponsiveListItemFlexColumnRenderer/text/runs")?
+            .as_array()?;
+        let raw_title = title_runs.first()?.get("text")?.as_str()?;
+        let title = normalize_unicode_spaces(raw_title);
+
+        // Column 1: Subtitle containing author and duration
+        let subtitle_runs = flex_columns
+            .get(1)?
+            .pointer("/musicResponsiveListItemFlexColumnRenderer/text/runs")?
+            .as_array()?;
+
         let mut author = "Unknown Artist".to_string();
-        let mut is_topic = false;
         let mut duration_seconds = 0;
+        let mut is_topic = false;
 
-        if let Some(col1_runs) = renderer
-            .pointer("/flexColumns/1/musicResponsiveListItemFlexColumnRenderer/text/runs")
-            .and_then(|r| r.as_array())
-        {
-            for run in col1_runs {
-                if let Some(text) = run.get("text").and_then(|t| t.as_str()) {
-                    let trimmed = text.trim();
-                    // Topic channel detection
-                    if trimmed.ends_with("- Topic") {
+        for run in subtitle_runs {
+            if let Some(text) = run.get("text").and_then(|t| t.as_str()) {
+                let trimmed = text.trim();
+                if trimmed.contains(':') && trimmed.chars().all(|c| c.is_ascii_digit() || c == ':')
+                {
+                    duration_seconds = parse_yt_duration(trimmed);
+                } else if !trimmed.is_empty() && trimmed != "•" && author == "Unknown Artist" {
+                    author = normalize_unicode_spaces(trimmed);
+                    if author.ends_with("- Topic") {
                         is_topic = true;
-                        author = trimmed.to_string();
-                    } else if author == "Unknown Artist" && !trimmed.is_empty() && trimmed != "•" {
-                        author = trimmed.to_string();
-                    }
-
-                    // Duration detection (e.g. "3:20" or "03:20")
-                    if trimmed.contains(':') && trimmed.len() <= 8 {
-                        duration_seconds = parse_time_to_seconds(trimmed);
                     }
                 }
             }
@@ -293,27 +355,29 @@ impl YouTubeMusicResolver {
 
         Some(YtCandidate {
             video_id,
-            title: normalize_unicode_spaces(title),
-            author: normalize_unicode_spaces(&author),
+            title,
+            author,
             duration_seconds,
             is_topic,
         })
     }
 }
 
-fn parse_time_to_seconds(time_str: &str) -> u32 {
-    let parts: Vec<&str> = time_str.split(':').collect();
-    if parts.len() == 2 {
-        let mins: u32 = parts[0].parse().unwrap_or(0);
-        let secs: u32 = parts[1].parse().unwrap_or(0);
-        mins * 60 + secs
-    } else if parts.len() == 3 {
-        let hrs: u32 = parts[0].parse().unwrap_or(0);
-        let mins: u32 = parts[1].parse().unwrap_or(0);
-        let secs: u32 = parts[2].parse().unwrap_or(0);
-        hrs * 3600 + mins * 60 + secs
-    } else {
-        0
+fn parse_yt_duration(s: &str) -> u32 {
+    let parts: Vec<&str> = s.split(':').collect();
+    match parts.len() {
+        2 => {
+            let m: u32 = parts[0].parse().unwrap_or(0);
+            let s: u32 = parts[1].parse().unwrap_or(0);
+            m * 60 + s
+        }
+        3 => {
+            let h: u32 = parts[0].parse().unwrap_or(0);
+            let m: u32 = parts[1].parse().unwrap_or(0);
+            let s: u32 = parts[2].parse().unwrap_or(0);
+            h * 3600 + m * 60 + s
+        }
+        _ => 0,
     }
 }
 
@@ -322,25 +386,59 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_topic_channel_prioritization() {
-        let normal_candidate = YtCandidate {
-            video_id: "abc".to_string(),
-            title: "Blinding Lights".to_string(),
-            author: "Random Uploader".to_string(),
-            duration_seconds: 200,
-            is_topic: false,
-        };
+    fn test_extract_youtube_id() {
+        // Full YouTube URL
+        assert_eq!(
+            YouTubeMusicResolver::extract_youtube_id(
+                "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            ),
+            Some("dQw4w9WgXcQ".to_string())
+        );
 
-        let topic_candidate = YtCandidate {
-            video_id: "def".to_string(),
-            title: "Blinding Lights".to_string(),
-            author: "The Weeknd - Topic".to_string(),
-            duration_seconds: 200,
-            is_topic: true,
-        };
+        // YouTube Music URL with extra params
+        assert_eq!(
+            YouTubeMusicResolver::extract_youtube_id(
+                "https://music.youtube.com/watch?v=dQw4w9WgXcQ&feature=share"
+            ),
+            Some("dQw4w9WgXcQ".to_string())
+        );
 
+        // Short youtu.be URL
+        assert_eq!(
+            YouTubeMusicResolver::extract_youtube_id("https://youtu.be/dQw4w9WgXcQ"),
+            Some("dQw4w9WgXcQ".to_string())
+        );
+
+        // Embed URL
+        assert_eq!(
+            YouTubeMusicResolver::extract_youtube_id("https://www.youtube.com/embed/dQw4w9WgXcQ"),
+            Some("dQw4w9WgXcQ".to_string())
+        );
+
+        // /v/ URL
+        assert_eq!(
+            YouTubeMusicResolver::extract_youtube_id("https://www.youtube.com/v/dQw4w9WgXcQ"),
+            Some("dQw4w9WgXcQ".to_string())
+        );
+
+        // Raw 11-char ID
+        assert_eq!(
+            YouTubeMusicResolver::extract_youtube_id("dQw4w9WgXcQ"),
+            Some("dQw4w9WgXcQ".to_string())
+        );
+
+        // Invalid inputs
+        assert_eq!(YouTubeMusicResolver::extract_youtube_id(""), None);
+        assert_eq!(
+            YouTubeMusicResolver::extract_youtube_id("https://spotify.com"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_topic_channel_prioritization_and_scoring() {
         let target = TrackMetadata {
-            id: "1".to_string(),
+            id: "t1".to_string(),
             title: "Blinding Lights".to_string(),
             artist: "The Weeknd".to_string(),
             album: None,
@@ -348,16 +446,66 @@ mod tests {
             cover_url: None,
         };
 
-        let candidates = vec![normal_candidate, topic_candidate];
+        let user_upload = YtCandidate {
+            video_id: "user_vid".to_string(),
+            title: "Blinding Lights".to_string(),
+            author: "Some User Uploads".to_string(),
+            duration_seconds: 200,
+            is_topic: false,
+        };
+
+        let topic_upload = YtCandidate {
+            video_id: "topic_vid".to_string(),
+            title: "Blinding Lights".to_string(),
+            author: "The Weeknd - Topic".to_string(),
+            duration_seconds: 200,
+            is_topic: true,
+        };
+
+        let candidates = vec![user_upload, topic_upload];
         let best = YouTubeMusicResolver::score_and_select_candidate(
             &candidates,
             &target,
-            "Blinding Lights",
+            "Blinding Lights The Weeknd",
         )
-        .expect("Should select best candidate");
+        .expect("Topic candidate should be selected");
 
-        // Must select the official - Topic channel candidate (+80 points)
-        assert_eq!(best.video_id, "def");
+        assert_eq!(best.video_id, "topic_vid");
         assert!(best.is_topic);
+    }
+
+    #[test]
+    fn test_parse_player_stream_result_highest_bitrate() {
+        let player_json = serde_json::json!({
+            "streamingData": {
+                "adaptiveFormats": [
+                    {
+                        "mimeType": "video/mp4; codecs=\"avc1.4d401f\"",
+                        "bitrate": 1500000,
+                        "url": "https://googlevideo.com/videoplayback_video"
+                    },
+                    {
+                        "mimeType": "audio/webm; codecs=\"opus\"",
+                        "bitrate": 160000,
+                        "url": "https://googlevideo.com/videoplayback_opus160"
+                    },
+                    {
+                        "mimeType": "audio/mp4; codecs=\"mp4a.40.2\"",
+                        "bitrate": 128000,
+                        "url": "https://googlevideo.com/videoplayback_aac128"
+                    }
+                ]
+            }
+        });
+
+        let stream = YouTubeMusicResolver::parse_player_stream_result(&player_json).unwrap();
+        assert_eq!(stream.bitrate, 160000);
+        assert_eq!(stream.container, "webm");
+        assert_eq!(stream.codec, "opus");
+        assert_eq!(
+            stream.stream_url,
+            "https://googlevideo.com/videoplayback_opus160"
+        );
+        assert_eq!(stream.provider, "youtube_innertube");
     }
 }

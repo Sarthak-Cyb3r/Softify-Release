@@ -1,11 +1,10 @@
-use crate::crypto::des::decrypt_jiosaavn_url;
-use crate::models::{StreamResult, TrackMetadata};
-use crate::normalizer::{
-    clean_title, is_disqualified_variant, normalize_unicode_spaces, score_duration_proximity,
-    token_similarity,
-};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use softify_crypto::{
+    clean_title, decrypt_jiosaavn_url, is_disqualified_variant, normalize_unicode_spaces,
+    score_duration_proximity, token_similarity,
+};
+use softify_models::{StreamResult, TrackMetadata};
 
 const JIOSAAVN_USER_AGENT: &str =
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
@@ -353,79 +352,156 @@ mod tests {
     }
 
     #[test]
-    fn test_actor_disqualification() {
-        let starring_song = JioSaavnSong {
-            id: "456".to_string(),
-            title: "Movie Song".to_string(),
-            subtitle: Some("Actor - Movie".to_string()),
-            duration: Some(serde_json::json!("200")),
-            image: None,
-            more_info: Some(JioSaavnMoreInfo {
-                album: None,
-                encrypted_media_url: Some("enc".to_string()),
-                artist_map: Some(JioSaavnArtistMap {
-                    primary_artists: vec![],
-                    featured_artists: vec![],
-                    artists: vec![JioSaavnArtist {
-                        id: Some("1".to_string()),
-                        name: Some("Famous Actor".to_string()),
-                        role: Some("starring".to_string()),
-                    }],
-                }),
-            }),
-        };
-
+    fn test_actor_starring_role_disqualification() {
         let target = TrackMetadata {
-            id: "1".to_string(),
-            title: "Movie Song".to_string(),
-            artist: "Singer".to_string(),
+            id: "target_1".to_string(),
+            title: "Tum Hi Ho".to_string(),
+            artist: "Arijit Singh".to_string(),
             album: None,
-            duration_seconds: 200,
+            duration_seconds: 262,
             cover_url: None,
         };
 
-        let candidates = vec![starring_song];
-        let result =
-            JioSaavnResolver::find_best_candidate(&candidates, &target, "Movie Song");
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_candidate_scoring_and_duration_bonus() {
-        let song = JioSaavnSong {
-            id: "789".to_string(),
-            title: "Blinding Lights".to_string(),
-            subtitle: Some("The Weeknd - After Hours".to_string()),
-            duration: Some(serde_json::json!("200")),
+        let candidate_starring = JioSaavnSong {
+            id: "cand_1".to_string(),
+            title: "Tum Hi Ho".to_string(),
+            subtitle: None,
+            duration: Some(serde_json::json!(262)),
             image: None,
             more_info: Some(JioSaavnMoreInfo {
-                album: Some("After Hours".to_string()),
-                encrypted_media_url: Some("valid_enc".to_string()),
+                album: Some("Aashiqui 2".to_string()),
+                encrypted_media_url: Some("encrypted_1".to_string()),
                 artist_map: Some(JioSaavnArtistMap {
                     primary_artists: vec![JioSaavnArtist {
                         id: Some("1".to_string()),
-                        name: Some("The Weeknd".to_string()),
-                        role: Some("primary_artists".to_string()),
+                        name: Some("Arijit Singh".to_string()),
+                        role: Some("music".to_string()),
                     }],
                     featured_artists: vec![],
-                    artists: vec![],
+                    artists: vec![JioSaavnArtist {
+                        id: Some("2".to_string()),
+                        name: Some("Aditya Roy Kapur".to_string()),
+                        role: Some("starring".to_string()), // Should trigger disqualification
+                    }],
                 }),
             }),
         };
 
+        let candidate_clean = JioSaavnSong {
+            id: "cand_2".to_string(),
+            title: "Tum Hi Ho".to_string(),
+            subtitle: None,
+            duration: Some(serde_json::json!(262)),
+            image: None,
+            more_info: Some(JioSaavnMoreInfo {
+                album: Some("Aashiqui 2".to_string()),
+                encrypted_media_url: Some("encrypted_2".to_string()),
+                artist_map: Some(JioSaavnArtistMap {
+                    primary_artists: vec![JioSaavnArtist {
+                        id: Some("1".to_string()),
+                        name: Some("Arijit Singh".to_string()),
+                        role: Some("singer".to_string()),
+                    }],
+                    featured_artists: vec![],
+                    artists: vec![JioSaavnArtist {
+                        id: Some("1".to_string()),
+                        name: Some("Arijit Singh".to_string()),
+                        role: Some("singer".to_string()),
+                    }],
+                }),
+            }),
+        };
+
+        let candidates = vec![candidate_starring, candidate_clean];
+        let best = JioSaavnResolver::find_best_candidate(&candidates, &target, "Tum Hi Ho Arijit Singh")
+            .expect("Clean candidate should be selected");
+
+        assert_eq!(best.id, "cand_2");
+    }
+
+    #[test]
+    fn test_variant_disqualification_and_duration_bonus() {
         let target = TrackMetadata {
-            id: "t1".to_string(),
-            title: "Blinding Lights".to_string(),
+            id: "target_2".to_string(),
+            title: "Starboy".to_string(),
             artist: "The Weeknd".to_string(),
             album: None,
-            duration_seconds: 203, // within 6s
+            duration_seconds: 230,
             cover_url: None,
         };
 
-        let candidates = vec![song];
-        let best =
-            JioSaavnResolver::find_best_candidate(&candidates, &target, "Blinding Lights The Weeknd")
-                .expect("Should find best candidate");
-        assert_eq!(best.id, "789");
+        let candidate_remix = JioSaavnSong {
+            id: "remix_id".to_string(),
+            title: "Starboy (Remix)".to_string(),
+            subtitle: Some("The Weeknd - Starboy (Remix)".to_string()),
+            duration: Some(serde_json::json!(230)),
+            image: None,
+            more_info: Some(JioSaavnMoreInfo {
+                album: None,
+                encrypted_media_url: Some("enc_remix".to_string()),
+                artist_map: None,
+            }),
+        };
+
+        let candidate_wrong_duration = JioSaavnSong {
+            id: "wrong_dur_id".to_string(),
+            title: "Starboy".to_string(),
+            subtitle: Some("The Weeknd - Starboy".to_string()),
+            duration: Some(serde_json::json!(400)), // >90s delta
+            image: None,
+            more_info: Some(JioSaavnMoreInfo {
+                album: None,
+                encrypted_media_url: Some("enc_dur".to_string()),
+                artist_map: None,
+            }),
+        };
+
+        let candidate_exact = JioSaavnSong {
+            id: "exact_id".to_string(),
+            title: "Starboy".to_string(),
+            subtitle: Some("The Weeknd - Starboy".to_string()),
+            duration: Some(serde_json::json!(232)), // within 6s delta -> +40 bonus
+            image: None,
+            more_info: Some(JioSaavnMoreInfo {
+                album: None,
+                encrypted_media_url: Some("enc_exact".to_string()),
+                artist_map: None,
+            }),
+        };
+
+        let candidates = vec![candidate_remix, candidate_wrong_duration, candidate_exact];
+        let best = JioSaavnResolver::find_best_candidate(&candidates, &target, "Starboy The Weeknd")
+            .expect("Exact candidate should win");
+
+        assert_eq!(best.id, "exact_id");
+    }
+
+    #[test]
+    fn test_parse_search_results_html_entities() {
+        let json = r#"{
+            "results": [
+                {
+                    "id": "song_1",
+                    "title": "Don&amp;#039;t Start Now",
+                    "subtitle": "Dua Lipa - Future Nostalgia",
+                    "duration": 183,
+                    "image": "https://c.saavncdn.com/150x150.jpg",
+                    "more_info": {
+                        "album": "Future Nostalgia",
+                        "encrypted_media_url": "dummy_enc"
+                    }
+                }
+            ]
+        }"#;
+
+        let results = JioSaavnResolver::parse_search_results(json).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Don't Start Now");
+        assert_eq!(results[0].artist, "Dua Lipa");
+        assert_eq!(results[0].duration_seconds, 183);
+        assert_eq!(
+            results[0].cover_url.as_deref(),
+            Some("https://c.saavncdn.com/500x500.jpg")
+        );
     }
 }

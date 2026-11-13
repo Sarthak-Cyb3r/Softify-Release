@@ -62,11 +62,14 @@ pub struct Lyrics {
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WrappedStats {
     pub total_play_time_ms: u64,
+    pub total_minutes_listened: u64,
     pub top_tracks: Vec<TrackMetadata>,
     pub top_artists: Vec<String>,
     pub most_played_track: Option<TrackMetadata>,
     pub unique_artists_count: u32,
     pub favorite_listening_hour: u8,
+    pub top_listening_day: Option<String>,
+    pub audio_persona: Option<String>,
 }
 
 /// Curated moods for algorithmically generated mood mixes.
@@ -243,11 +246,14 @@ mod tests {
 
         let stats = WrappedStats {
             total_play_time_ms: 36000000,
+            total_minutes_listened: 600,
             top_tracks: vec![track.clone()],
             top_artists: vec!["Artist".to_string()],
             most_played_track: Some(track),
             unique_artists_count: 42,
             favorite_listening_hour: 22,
+            top_listening_day: Some("Friday".to_string()),
+            audio_persona: Some("The Night Owl".to_string()),
         };
 
         let json = serde_json::to_string(&stats).unwrap();

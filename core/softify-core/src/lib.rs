@@ -5,7 +5,10 @@ pub mod normalizer;
 pub mod resolvers;
 pub mod storage;
 
-pub use models::{AudioQuality, SearchResult, StreamResult, TrackMetadata};
+pub use models::{
+    AudioQuality, EqualizerPreset, Lyrics, Mix, MixType, Mood, Playlist, SearchResult,
+    StreamResult, TrackMetadata, UpdateInfo, WrappedStats,
+};
 
 uniffi::setup_scaffolding!();
 
@@ -139,6 +142,17 @@ impl SoftifyEngineService {
     /// Retrieves synchronized or plain lyrics from LRCLIB / JioSaavn.
     pub fn get_lyrics(&self, title: String, artist: String) -> Option<String> {
         let lyrics = self.lyrics.clone();
+        self.runtime.block_on(async move {
+            lyrics
+                .resolve_lyrics(&title, &artist, None)
+                .await
+                .and_then(|l| l.synced_lyrics.or(l.plain_lyrics))
+        })
+    }
+
+    /// Retrieves structured Lyrics container with plain, synced, and romanization status.
+    pub fn get_lyrics_container(&self, title: String, artist: String) -> Option<Lyrics> {
+        let lyrics = self.lyrics.clone();
         self.runtime
             .block_on(async move { lyrics.resolve_lyrics(&title, &artist, None).await })
     }
@@ -183,6 +197,41 @@ impl SoftifyEngineService {
         self.db
             .get_playback_history(limit as usize)
             .unwrap_or_default()
+    }
+
+    /// Generates algorithmic Daily Mixes 1..6.
+    pub fn get_daily_mixes(&self) -> Vec<Mix> {
+        softify_recommend::RecommendEngine::new(self.db.clone())
+            .generate_daily_mixes()
+            .unwrap_or_default()
+    }
+
+    /// Generates Weekly Discovery Mix with unheard tracks.
+    pub fn get_weekly_discovery(&self) -> Option<Mix> {
+        softify_recommend::RecommendEngine::new(self.db.clone())
+            .generate_weekly_discovery()
+            .ok()
+    }
+
+    /// Generates Mood Mix for a specific mood.
+    pub fn get_mood_mix(&self, mood: Mood) -> Option<Mix> {
+        softify_recommend::RecommendEngine::new(self.db.clone())
+            .generate_mood_mix(mood)
+            .ok()
+    }
+
+    /// Computes full Softify Wrapped listening statistics.
+    pub fn get_wrapped_stats(&self) -> Option<WrappedStats> {
+        softify_analytics::AnalyticsEngine::new(self.db.clone())
+            .compute_wrapped(None)
+            .ok()
+    }
+
+    /// Checks GitHub releases for app updates.
+    pub fn check_for_updates(&self, current_version: String) -> Option<UpdateInfo> {
+        let checker = softify_updater::UpdateChecker::new();
+        self.runtime
+            .block_on(async move { checker.check_for_updates(&current_version).await.ok() })
     }
 }
 

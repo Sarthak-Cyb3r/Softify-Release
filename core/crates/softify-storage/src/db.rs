@@ -227,6 +227,62 @@ impl Database {
         Ok(tracks)
     }
 
+    /// Returns cached tracks matching an optional artist name, or all cached tracks if artist is None.
+    pub fn get_cached_tracks(
+        &self,
+        artist: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<TrackMetadata>, rusqlite::Error> {
+        let conn = self.conn.lock().unwrap();
+        let mut tracks = Vec::new();
+
+        if let Some(art) = artist {
+            let mut stmt = conn.prepare(
+                "SELECT id, title, artist, album, duration_seconds, cover_url
+                 FROM tracks
+                 WHERE artist LIKE ?1
+                 ORDER BY cached_at DESC
+                 LIMIT ?2",
+            )?;
+            let pattern = format!("%{art}%");
+            let rows = stmt.query_map(params![pattern, limit as i64], |row| {
+                Ok(TrackMetadata {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    artist: row.get(2)?,
+                    album: row.get(3)?,
+                    duration_seconds: row.get(4)?,
+                    cover_url: row.get(5)?,
+                })
+            })?;
+            for t in rows {
+                tracks.push(t?);
+            }
+        } else {
+            let mut stmt = conn.prepare(
+                "SELECT id, title, artist, album, duration_seconds, cover_url
+                 FROM tracks
+                 ORDER BY cached_at DESC
+                 LIMIT ?1",
+            )?;
+            let rows = stmt.query_map(params![limit as i64], |row| {
+                Ok(TrackMetadata {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    artist: row.get(2)?,
+                    album: row.get(3)?,
+                    duration_seconds: row.get(4)?,
+                    cover_url: row.get(5)?,
+                })
+            })?;
+            for t in rows {
+                tracks.push(t?);
+            }
+        }
+
+        Ok(tracks)
+    }
+
     /// Deletes a track from cache and FTS5.
     pub fn delete_track(&self, id: &str) -> Result<(), rusqlite::Error> {
         let conn = self.conn.lock().unwrap();
@@ -395,13 +451,55 @@ impl Database {
             .query_row(params![since], |r| r.get::<_, u8>(0))
             .unwrap_or(12);
 
+        // 6. Top listening day of the week
+        let mut day_stmt = conn.prepare(
+            "SELECT CAST(strftime('%w', played_at, 'unixepoch') AS INTEGER) as day_of_week, COUNT(*) as count
+             FROM playback_history
+             WHERE played_at >= ?1
+             GROUP BY day_of_week
+             ORDER BY count DESC
+             LIMIT 1",
+        )?;
+        let top_day_idx: Option<u8> = day_stmt.query_row(params![since], |r| r.get(0)).ok();
+        let top_listening_day = top_day_idx.map(|idx| match idx {
+            0 => "Sunday",
+            1 => "Monday",
+            2 => "Tuesday",
+            3 => "Wednesday",
+            4 => "Thursday",
+            5 => "Friday",
+            6 => "Saturday",
+            _ => "Everyday",
+        }.to_string());
+
+        let total_minutes_listened = total_play_time_ms / 60_000;
+
+        let audio_persona = if total_seconds == 0 {
+            None
+        } else if favorite_listening_hour >= 22 || favorite_listening_hour <= 4 {
+            Some("The Night Owl".to_string())
+        } else if (5..=8).contains(&favorite_listening_hour) {
+            Some("The Early Bird".to_string())
+        } else if top_artists.len() == 1 || (top_tracks.len() > 0 && unique_artists_count == 1) {
+            Some("The Dedicated Devotee".to_string())
+        } else if unique_artists_count > 10 {
+            Some("The Sonic Explorer".to_string())
+        } else if total_seconds >= 300_000 {
+            Some("The Heavy Streamer".to_string())
+        } else {
+            Some("The Harmonic Nomad".to_string())
+        };
+
         Ok(WrappedStats {
             total_play_time_ms,
+            total_minutes_listened,
             top_tracks,
             top_artists,
             most_played_track,
             unique_artists_count,
             favorite_listening_hour,
+            top_listening_day,
+            audio_persona,
         })
     }
 
@@ -882,10 +980,13 @@ mod tests {
 
         let stats = db.get_wrapped_stats(None).unwrap();
         assert_eq!(stats.total_play_time_ms, 360000);
+        assert_eq!(stats.total_minutes_listened, 6);
         assert_eq!(stats.top_tracks.len(), 1);
         assert_eq!(stats.top_artists.len(), 1);
         assert_eq!(stats.unique_artists_count, 1);
         assert_eq!(stats.most_played_track.unwrap().id, "t10");
+        assert!(stats.top_listening_day.is_some());
+        assert!(stats.audio_persona.is_some());
 
         db.clear_playback_history().unwrap();
         assert_eq!(db.get_playback_history(5).unwrap().len(), 0);

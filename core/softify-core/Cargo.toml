@@ -13,6 +13,10 @@ crate-type = ["lib", "cdylib", "staticlib"]
 softify-models = { path = "../crates/softify-models" }
 softify-crypto = { path = "../crates/softify-crypto" }
 softify-storage = { path = "../crates/softify-storage" }
+softify-resolvers = { path = "../crates/softify-resolvers" }
+softify-recommend = { path = "../crates/softify-recommend" }
+softify-analytics = { path = "../crates/softify-analytics" }
+softify-updater = { path = "../crates/softify-updater" }
 
 # Cryptography
 des = "0.8"

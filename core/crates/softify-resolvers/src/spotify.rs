@@ -1,7 +1,7 @@
-use crate::models::TrackMetadata;
-use crate::normalizer::normalize_unicode_spaces;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use softify_crypto::normalize_unicode_spaces;
+use softify_models::TrackMetadata;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
@@ -268,13 +268,11 @@ mod tests {
                                             ]
                                         },
                                         "albumOfTrack": {
-                                            "name": "After Hours",
+                                            "name": "After\u00A0Hours",
                                             "coverArt": {
                                                 "sources": [
                                                     {
-                                                        "url": "https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36",
-                                                        "width": 640,
-                                                        "height": 640
+                                                        "url": "https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36"
                                                     }
                                                 ]
                                             }
@@ -288,17 +286,19 @@ mod tests {
             }
         }"#;
 
-        let tracks = SpotifyResolver::parse_pathfinder_search_response(sample_json)
-            .expect("Should parse pathfinder response");
-
+        let tracks = SpotifyResolver::parse_pathfinder_search_response(sample_json).unwrap();
         assert_eq!(tracks.len(), 1);
         let track = &tracks[0];
+
         assert_eq!(track.id, "0VjIjW4GlUZAMYd2vXMi3b");
-        // Check mandatory non-breaking space replacement
+        // Crucial: \u{00A0} NBSP must be normalized to standard ASCII space ' '
         assert_eq!(track.title, "Blinding Lights");
         assert_eq!(track.artist, "The Weeknd");
+        assert_eq!(track.album.as_deref(), Some("After Hours"));
         assert_eq!(track.duration_seconds, 200);
-        assert_eq!(track.album, Some("After Hours".to_string()));
-        assert!(track.cover_url.is_some());
+        assert_eq!(
+            track.cover_url.as_deref(),
+            Some("https://i.scdn.co/image/ab67616d0000b2738863bc11d2aa12b54f5aeb36")
+        );
     }
 }

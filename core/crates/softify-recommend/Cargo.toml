@@ -8,3 +8,4 @@ description = "Music recommendation and mix generation engine"
 [dependencies]
 softify-models = { path = "../softify-models" }
 softify-storage = { path = "../softify-storage" }
+tokio = { version = "1", features = ["sync", "macros", "time"] }

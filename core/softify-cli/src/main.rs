@@ -64,6 +64,16 @@ enum Commands {
         #[arg(short, long, default_value_t = 10)]
         limit: u32,
     },
+    /// Generate algorithmic daily mixes
+    Mixes,
+    /// View Softify Wrapped listening stats
+    Wrapped,
+    /// Check GitHub releases for updates
+    CheckUpdate {
+        /// Current version to compare against (defaults to "0.1.0")
+        #[arg(short, long, default_value = "0.1.0")]
+        current: String,
+    },
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -213,6 +223,82 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 for (idx, track) in tracks.iter().enumerate() {
                     println!("[{:>2}] {} - {}", idx + 1, track.artist, track.title);
+                }
+            }
+        }
+        Commands::Mixes => {
+            println!("🎧 Generating personalized algorithmic mixes...");
+            let mixes = engine.get_daily_mixes();
+            if mixes.is_empty() {
+                println!("No daily mixes generated yet. Like songs or listen to music first!");
+            } else {
+                for mix in mixes {
+                    println!("\n=== {} ===", mix.title);
+                    if let Some(desc) = mix.description {
+                        println!("{}", desc);
+                    }
+                    for (i, track) in mix.tracks.iter().enumerate().take(5) {
+                        println!("  [{:>2}] {} - {}", i + 1, track.artist, track.title);
+                    }
+                }
+            }
+        }
+        Commands::Wrapped => {
+            println!("🎉 Computing your Softify Wrapped stats...");
+            match engine.get_wrapped_stats() {
+                Some(stats) => {
+                    println!("\n╔══════════════════════════════════════════════════════════════╗");
+                    println!("║                    SOFTIFY WRAPPED                           ║");
+                    println!("╚══════════════════════════════════════════════════════════════╝");
+                    if let Some(persona) = stats.audio_persona {
+                        println!("Audio Persona:          {}", persona);
+                    }
+                    println!("Total Minutes Listened: {}", stats.total_minutes_listened);
+                    if let Some(day) = stats.top_listening_day {
+                        println!("Top Listening Day:      {}", day);
+                    }
+                    println!("Favorite Hour:          {:02}:00", stats.favorite_listening_hour);
+                    println!("Unique Artists:         {}", stats.unique_artists_count);
+                    if !stats.top_artists.is_empty() {
+                        println!("\nTop Artists:");
+                        for (i, artist) in stats.top_artists.iter().enumerate() {
+                            println!("  {}. {}", i + 1, artist);
+                        }
+                    }
+                    if !stats.top_tracks.is_empty() {
+                        println!("\nTop Tracks:");
+                        for (i, track) in stats.top_tracks.iter().enumerate() {
+                            println!("  {}. {} - {}", i + 1, track.artist, track.title);
+                        }
+                    }
+                    println!("{:-<64}", "");
+                }
+                None => {
+                    println!("No playback history available to compute Wrapped stats.");
+                }
+            }
+        }
+        Commands::CheckUpdate { current } => {
+            println!("🔄 Checking for updates (current version: {})...", current);
+            match engine.check_for_updates(current.clone()) {
+                Some(info) => {
+                    if info.has_update {
+                        println!(
+                            "\n✨ New update available: v{} (Current: v{})",
+                            info.latest_version, info.current_version
+                        );
+                        if let Some(notes) = info.release_notes {
+                            println!("\nRelease Notes:\n{}", notes);
+                        }
+                        if let Some(url) = info.download_url {
+                            println!("\nDownload URL: {}", url);
+                        }
+                    } else {
+                        println!("\n✅ You are up to date! (v{})", info.current_version);
+                    }
+                }
+                None => {
+                    println!("Unable to fetch release details from GitHub.");
                 }
             }
         }
