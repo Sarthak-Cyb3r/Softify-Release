@@ -68,7 +68,18 @@ enum Commands {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
-    let engine = SoftifyEngineService::new(None)
+
+    // Default persistent local database cache in user data dir or local dir
+    let db_path = match std::env::var("HOME") {
+        Ok(home) => {
+            let dir = std::path::PathBuf::from(home).join(".local/share/softify");
+            let _ = std::fs::create_dir_all(&dir);
+            Some(dir.join("softify.db").to_string_lossy().to_string())
+        }
+        Err(_) => None,
+    };
+
+    let engine = SoftifyEngineService::new(db_path)
         .map_err(|e| format!("Engine initialization failed: {e}"))?;
 
     match cli.command {
