@@ -1,0 +1,36 @@
+[package]
+name = "softify-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Softify Team"]
+description = "Core native engine for Softify Next-Gen music streaming"
+
+[lib]
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[dependencies]
+# Cryptography
+des = "0.8"
+cipher = { version = "0.4", features = ["block-padding"] }
+generic-array = "0.14"
+base64 = "0.22"
+
+# Serialization & Networking
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "macros", "time"] }
+async-trait = "0.1"
+
+# Local Database & Search
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# Utilities
+regex = "1.10"
+thiserror = "1.0"
+
+# UniFFI for Kotlin / Multiplatform Bindings
+uniffi = { version = "0.28" }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
