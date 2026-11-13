@@ -348,8 +348,9 @@ mod tests {
             cover_url: None,
         };
 
+        let candidates = vec![normal_candidate, topic_candidate];
         let best = YouTubeMusicResolver::score_and_select_candidate(
-            &[normal_candidate, topic_candidate],
+            &candidates,
             &target,
             "Blinding Lights",
         )

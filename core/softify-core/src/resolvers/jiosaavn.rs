@@ -384,8 +384,9 @@ mod tests {
             cover_url: None,
         };
 
+        let candidates = vec![starring_song];
         let result =
-            JioSaavnResolver::find_best_candidate(&[starring_song], &target, "Movie Song");
+            JioSaavnResolver::find_best_candidate(&candidates, &target, "Movie Song");
         assert!(result.is_err());
     }
 
@@ -421,8 +422,9 @@ mod tests {
             cover_url: None,
         };
 
+        let candidates = vec![song];
         let best =
-            JioSaavnResolver::find_best_candidate(&[song], &target, "Blinding Lights The Weeknd")
+            JioSaavnResolver::find_best_candidate(&candidates, &target, "Blinding Lights The Weeknd")
                 .expect("Should find best candidate");
         assert_eq!(best.id, "789");
     }
