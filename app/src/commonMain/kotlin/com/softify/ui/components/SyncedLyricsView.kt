@@ -66,7 +66,7 @@ fun SyncedLyricsView(
     onSeekToTimestamp: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    if (lyrics == null || (lyrics.plain.isNullOrEmpty() && lyrics.synced.isNullOrEmpty())) {
+    if (lyrics == null || (lyrics.plainLyrics.isNullOrEmpty() && lyrics.syncedLyrics.isNullOrEmpty())) {
         Box(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -79,7 +79,7 @@ fun SyncedLyricsView(
         return
     }
 
-    val syncedLines = parseLrc(lyrics.synced)
+    val syncedLines = parseLrc(lyrics.syncedLyrics)
     val listState = rememberLazyListState()
 
     // Determine current active lyric line index
@@ -123,7 +123,7 @@ fun SyncedLyricsView(
                 .fillMaxSize()
                 .padding(24.dp)
         ) {
-            if (lyrics.hasRomanized) {
+            if (lyrics.isRomanized) {
                 item {
                     Text(
                         text = "✨ Romanized Lyrics Active",
@@ -134,7 +134,7 @@ fun SyncedLyricsView(
             }
             item {
                 Text(
-                    text = lyrics.plain ?: "",
+                    text = lyrics.plainLyrics ?: "",
                     style = SoftifyTypography.BodyPrimary,
                     lineHeight = SoftifyTypography.LyricsIdle.lineHeight
                 )

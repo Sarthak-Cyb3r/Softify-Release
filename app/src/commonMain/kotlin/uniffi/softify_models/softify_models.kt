@@ -1583,7 +1583,7 @@ sealed class MixType {
     
     
     data class Mood(
-        val `mood`: Mood) : MixType() {
+        val `mood`: uniffi.softify_models.Mood) : MixType() {
         companion object
     }
     

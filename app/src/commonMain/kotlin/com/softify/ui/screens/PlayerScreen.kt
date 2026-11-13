@@ -163,7 +163,7 @@ fun PlayerScreen(
 
                     // Audio Fidelity HUD
                     val streamInfo = uiState.currentStream
-                    val bitrateText = if (streamInfo != null) "${streamInfo.bitrate / 1000} KBPS" else "320 KBPS"
+                    val bitrateText = if (streamInfo != null) "${streamInfo.bitrate.toInt() / 1000} KBPS" else "320 KBPS"
                     val codecText = streamInfo?.codec?.uppercase() ?: "AAC"
                     AudioFidelityBadge(bitrateText = bitrateText, codecText = codecText)
                 }

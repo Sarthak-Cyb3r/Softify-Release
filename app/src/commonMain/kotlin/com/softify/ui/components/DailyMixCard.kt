@@ -103,7 +103,7 @@ fun DailyMixCard(
         )
 
         Text(
-            text = mix.description,
+            text = mix.description ?: "",
             style = SoftifyTypography.Caption,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis

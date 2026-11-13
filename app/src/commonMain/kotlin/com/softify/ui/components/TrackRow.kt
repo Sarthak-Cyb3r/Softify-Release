@@ -107,8 +107,9 @@ fun TrackRow(
         Spacer(modifier = Modifier.width(12.dp))
 
         // Duration formatted mm:ss
-        val minutes = track.durationSeconds / 60
-        val seconds = track.durationSeconds % 60
+        val totalSec = track.durationSeconds.toLong()
+        val minutes = totalSec / 60
+        val seconds = totalSec % 60
         Text(
             text = "%d:%02d".format(minutes, seconds),
             style = SoftifyTypography.CodeMeta
