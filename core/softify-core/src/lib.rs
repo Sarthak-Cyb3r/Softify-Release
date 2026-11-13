@@ -1,4 +1,5 @@
 pub mod crypto;
+pub mod downloader;
 pub mod models;
 pub mod normalizer;
 pub mod resolvers;
@@ -8,10 +9,13 @@ pub use models::{AudioQuality, SearchResult, StreamResult, TrackMetadata};
 
 uniffi::setup_scaffolding!();
 
+use crate::downloader::{download_audio_stream, get_track_filename, is_offline_ready};
 use crate::resolvers::hybrid::HybridResolver;
 use crate::resolvers::jiosaavn::JioSaavnResolver;
+use crate::resolvers::lyrics::LyricsResolver;
 use crate::resolvers::spotify::SpotifyResolver;
 use crate::storage::db::Database;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 /// Structured error variants exposed across UniFFI to Kotlin as typed exceptions.
@@ -29,6 +33,8 @@ pub enum SoftifyError {
     CryptoError { msg: String },
     #[error("Network error: {msg}")]
     NetworkError { msg: String },
+    #[error("Download error: {msg}")]
+    DownloadError { msg: String },
 }
 
 /// Service trait exposed to Kotlin / Multiplatform callers via UniFFI.
@@ -45,7 +51,9 @@ pub struct SoftifyEngineService {
     spotify: SpotifyResolver,
     jiosaavn: JioSaavnResolver,
     hybrid: HybridResolver,
+    lyrics: LyricsResolver,
     db: Database,
+    http_client: reqwest::Client,
 }
 
 #[uniffi::export]
@@ -71,12 +79,19 @@ impl SoftifyEngineService {
             })?,
         };
 
+        let http_client = reqwest::Client::builder()
+            .user_agent("Softify-NextGen/1.0 (Linux; Android)")
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
+
         Ok(Arc::new(Self {
             runtime,
             spotify: SpotifyResolver::new(),
             jiosaavn: JioSaavnResolver::new(),
             hybrid: HybridResolver::new(),
+            lyrics: LyricsResolver::new(),
             db,
+            http_client,
         }))
     }
 
@@ -121,9 +136,39 @@ impl SoftifyEngineService {
         Ok(stream)
     }
 
-    /// Retrieves lyrics for a track (placeholder for dedicated lyrics provider).
-    pub fn get_lyrics(&self, _title: String, _artist: String) -> Option<String> {
-        None
+    /// Retrieves synchronized or plain lyrics from LRCLIB / JioSaavn.
+    pub fn get_lyrics(&self, title: String, artist: String) -> Option<String> {
+        let lyrics = self.lyrics.clone();
+        self.runtime
+            .block_on(async move { lyrics.resolve_lyrics(&title, &artist, None).await })
+    }
+
+    /// Downloads studio-grade audio stream to the given destination directory and returns the absolute file path.
+    pub fn download_track(
+        &self,
+        track: TrackMetadata,
+        destination_dir: String,
+    ) -> Result<String, SoftifyError> {
+        let stream = self.resolve_stream(track.clone())?;
+        let filename = get_track_filename(&track.title, &track.artist, &stream.container);
+        let dest_path: PathBuf = Path::new(&destination_dir).join(&filename);
+
+        let client = self.http_client.clone();
+        let stream_url = stream.stream_url.clone();
+        let target_path = dest_path.clone();
+
+        self.runtime
+            .block_on(async move {
+                download_audio_stream(&client, &stream_url, &target_path).await
+            })
+            .map_err(|e| SoftifyError::DownloadError { msg: e })?;
+
+        Ok(dest_path.to_string_lossy().to_string())
+    }
+
+    /// Checks if a file path is offline-ready and fully downloaded.
+    pub fn is_file_offline(&self, file_path: String) -> bool {
+        is_offline_ready(Path::new(&file_path))
     }
 
     /// Searches cached catalog via SQLite FTS5 full-text search.

@@ -29,7 +29,11 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 thiserror = "1.0"
 
 # UniFFI for Kotlin / Multiplatform Bindings
-uniffi = { version = "0.28" }
+uniffi = { version = "0.28", features = ["cli"] }
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

@@ -1,5 +1,6 @@
 pub mod hybrid;
 pub mod jiosaavn;
+pub mod lyrics;
 pub mod spotify;
 pub mod youtube;
 

@@ -5,7 +5,10 @@ use softify_core::SoftifyEngineService;
 
 #[derive(Parser)]
 #[command(name = "softify-cli")]
-#[command(about = "Softify Next-Gen CLI Runner for Stream Resolution & Verification", long_about = None)]
+#[command(
+    about = "Softify Next-Gen CLI Runner for Stream Resolution, Playback & Verification",
+    long_about = None
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -33,10 +36,33 @@ enum Commands {
         /// Base64 encrypted media URL string
         ciphertext: String,
     },
+    /// Fetch synchronized and plain lyrics for a track
+    Lyrics {
+        /// Song title
+        title: String,
+        /// Artist name
+        artist: String,
+    },
+    /// Download studio 320 Kbps audio file to disk
+    Download {
+        /// Song title
+        title: String,
+        /// Artist name
+        artist: String,
+        /// Output destination directory (defaults to current dir)
+        #[arg(short, long, default_value = ".")]
+        dir: String,
+    },
     /// Query local SQLite FTS5 catalog cache
     CacheSearch {
         /// Search query for local database cache
         query: String,
+    },
+    /// View recently resolved playback history
+    History {
+        /// Max number of items to show
+        #[arg(short, long, default_value_t = 10)]
+        limit: u32,
     },
 }
 
@@ -88,10 +114,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Ok(stream) => {
                     println!("\n✨ Stream Successfully Resolved!");
                     println!("{:-<80}", "");
-                    println!("Provider:  {}", stream.provider);
-                    println!("Bitrate:   {} kbps", stream.bitrate / 1000);
-                    println!("Container: {}", stream.container);
-                    println!("Codec:     {}", stream.codec);
+                    println!("Provider:   {}", stream.provider);
+                    println!("Bitrate:    {} kbps", stream.bitrate / 1000);
+                    println!("Container:  {}", stream.container);
+                    println!("Codec:      {}", stream.codec);
                     println!("Stream URL: {}", stream.stream_url);
                     println!("{:-<80}", "");
                 }
@@ -114,6 +140,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
+        Commands::Lyrics { title, artist } => {
+            println!("📜 Fetching lyrics for: \"{}\" by \"{}\"...", title, artist);
+            match engine.get_lyrics(title, artist) {
+                Some(lyrics) => {
+                    println!("\n--- Lyrics ---\n");
+                    println!("{}", lyrics);
+                    println!("\n--------------");
+                }
+                None => {
+                    println!("No lyrics found.");
+                }
+            }
+        }
+        Commands::Download { title, artist, dir } => {
+            println!(
+                "📥 Resolving and downloading studio 320k audio for: \"{}\" by \"{}\"...",
+                title, artist
+            );
+            let track = TrackMetadata {
+                id: "cli_download".to_string(),
+                title,
+                artist,
+                album: None,
+                duration_seconds: 0,
+                cover_url: None,
+            };
+
+            match engine.download_track(track, dir) {
+                Ok(path) => {
+                    println!("\n✨ Audio Download Complete!");
+                    println!("Saved to: {}", path);
+                }
+                Err(err) => {
+                    eprintln!("\n❌ Download Failed: {}", err);
+                    std::process::exit(1);
+                }
+            }
+        }
         Commands::CacheSearch { query } => {
             println!("📂 Querying SQLite FTS5 cache for: \"{}\"...", query);
             let tracks = engine.search_cache(query, 20);
@@ -128,6 +192,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         track.title,
                         track.id
                     );
+                }
+            }
+        }
+        Commands::History { limit } => {
+            println!("🕒 Playback History (Last {} tracks):", limit);
+            let tracks = engine.get_playback_history(limit);
+            if tracks.is_empty() {
+                println!("No playback history recorded yet.");
+            } else {
+                for (idx, track) in tracks.iter().enumerate() {
+                    println!("[{:>2}] {} - {}", idx + 1, track.artist, track.title);
                 }
             }
         }
