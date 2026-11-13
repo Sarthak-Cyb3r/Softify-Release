@@ -43,14 +43,26 @@ jobs:
             echo "Rust core directory not yet created."
           fi
 
-      - name: Verify UniFFI Kotlin bindings generation
+      - name: Build Linux release binaries & UniFFI bindings
         run: |
           if [ -d "core" ]; then
             cd core
-            cargo build -p softify-core
-            if [ -f "target/debug/libsoftify_core.so" ]; then
-              cargo run --bin uniffi-bindgen generate --library target/debug/libsoftify_core.so --language kotlin --out-dir target/bindings/kotlin
-              echo "UniFFI Kotlin bindings successfully generated:"
-              ls -la target/bindings/kotlin/
+            cargo build --release --workspace
+            if [ -f "target/release/libsoftify_core.so" ]; then
+              mkdir -p target/release/bindings
+              cargo run --bin uniffi-bindgen generate --library target/release/libsoftify_core.so --language kotlin --out-dir target/release/bindings/kotlin
+              echo "Release build and Kotlin bindings generated:"
+              ls -lh target/release/softify-cli target/release/libsoftify_core.so
+              ls -la target/release/bindings/kotlin/
             fi
           fi
+
+      - name: Upload Linux x86_64 Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: softify-linux-x86_64
+          path: |
+            core/target/release/softify-cli
+            core/target/release/libsoftify_core.so
+            core/target/release/bindings/
+          if-no-files-found: error
