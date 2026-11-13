@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+uniffi::setup_scaffolding!();
+
 /// Canonical metadata for a music track exposed across UniFFI.
 #[derive(uniffi::Record, Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TrackMetadata {
