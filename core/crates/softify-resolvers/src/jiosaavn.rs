@@ -321,9 +321,11 @@ fn urlencoding_encode(s: &str) -> String {
 }
 
 fn decode_html_entities(s: &str) -> String {
-    s.replace("&quot;", "\"")
+    let unescaped_amp = s.replace("&amp;", "&");
+    unescaped_amp
+        .replace("&quot;", "\"")
         .replace("&#039;", "'")
-        .replace("&amp;", "&")
+        .replace("&apos;", "'")
         .replace("&lt;", "<")
         .replace("&gt;", ">")
 }
