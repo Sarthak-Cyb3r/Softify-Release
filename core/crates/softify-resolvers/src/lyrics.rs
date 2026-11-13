@@ -212,8 +212,6 @@ fn romanize_line(line: &str) -> String {
                 'ऐ' => Some("ai"),
                 'ओ' => Some("o"),
                 'औ' => Some("au"),
-                'अं' => Some("am"),
-                'अः' => Some("ah"),
                 _ => None,
             };
 
@@ -308,6 +306,7 @@ fn romanize_line(line: &str) -> String {
                 'ौ' => result.push_str("au"),
                 'ं' => result.push('m'),
                 'ँ' => result.push('n'),
+                'ः' => result.push_str("h"),
                 '्' => {}
                 _ => result.push(c),
             }

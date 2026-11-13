@@ -208,10 +208,10 @@ mod tests {
 
     #[test]
     fn test_parse_release_with_apk_asset() {
-        let json = r#"{
+        let release = serde_json::json!({
             "tag_name": "v1.2.0",
             "name": "Softify v1.2.0 Studio Release",
-            "body": "## What's New\n- 320 Kbps studio master\n- Algorithmic mixes",
+            "body": "## Release Notes\n- 320 Kbps studio master\n- Algorithmic mixes",
             "html_url": "https://github.com/Sarthak-Cyb3r/Softify-Release/releases/tag/v1.2.0",
             "assets": [
                 {
@@ -219,9 +219,10 @@ mod tests {
                     "browser_download_url": "https://github.com/Sarthak-Cyb3r/Softify-Release/releases/download/v1.2.0/softify.apk"
                 }
             ]
-        }"#;
+        });
+        let json = release.to_string();
 
-        let info = UpdateChecker::parse_release_response(json, "1.1.0").unwrap();
+        let info = UpdateChecker::parse_release_response(&json, "1.1.0").unwrap();
         assert_eq!(info.latest_version, "1.2.0");
         assert_eq!(info.current_version, "1.1.0");
         assert!(info.has_update);
@@ -229,19 +230,20 @@ mod tests {
             info.download_url.as_deref(),
             Some("https://github.com/Sarthak-Cyb3r/Softify-Release/releases/download/v1.2.0/softify.apk")
         );
-        assert!(info.release_notes.as_deref().unwrap().contains("What's New"));
+        assert!(info.release_notes.as_deref().unwrap().contains("Release Notes"));
     }
 
     #[test]
     fn test_parse_release_fallback_to_html_url() {
-        let json = r#"{
+        let release = serde_json::json!({
             "tag_name": "v1.0.0",
             "body": "Initial release",
             "html_url": "https://github.com/Sarthak-Cyb3r/Softify-Release/releases/tag/v1.0.0",
             "assets": []
-        }"#;
+        });
+        let json = release.to_string();
 
-        let info = UpdateChecker::parse_release_response(json, "1.0.0").unwrap();
+        let info = UpdateChecker::parse_release_response(&json, "1.0.0").unwrap();
         assert!(!info.has_update);
         assert_eq!(
             info.download_url.as_deref(),
