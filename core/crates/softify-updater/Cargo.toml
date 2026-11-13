@@ -1,0 +1,12 @@
+[package]
+name = "softify-updater"
+version = "0.1.0"
+edition = "2021"
+authors = ["Softify Team"]
+description = "Auto-update and version checking engine"
+
+[dependencies]
+softify-models = { path = "../softify-models" }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

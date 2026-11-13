@@ -1,0 +1,10 @@
+[package]
+name = "softify-analytics"
+version = "0.1.0"
+edition = "2021"
+authors = ["Softify Team"]
+description = "Listening analytics, playback telemetry, and Wrapped generator"
+
+[dependencies]
+softify-models = { path = "../softify-models" }
+softify-storage = { path = "../softify-storage" }

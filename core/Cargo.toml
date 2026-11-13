@@ -1,6 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/softify-models",
+    "crates/softify-crypto",
+    "crates/softify-storage",
+    "crates/softify-resolvers",
+    "crates/softify-recommend",
+    "crates/softify-analytics",
+    "crates/softify-updater",
     "softify-core",
     "softify-cli",
 ]

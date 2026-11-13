@@ -7,5 +7,8 @@ description = "Terminal CLI runner for Softify Next-Gen"
 
 [dependencies]
 softify-core = { path = "../softify-core" }
+softify-models = { path = "../crates/softify-models" }
+softify-crypto = { path = "../crates/softify-crypto" }
+softify-storage = { path = "../crates/softify-storage" }
 clap = { version = "4.5", features = ["derive"] }
 serde_json = "1.0"

@@ -1,0 +1,12 @@
+[package]
+name = "softify-crypto"
+version = "0.1.0"
+edition = "2021"
+authors = ["Softify Team"]
+description = "Cryptographic decryptors, 320 Kbps stream rewriters, and text normalizers"
+
+[dependencies]
+des = "0.8"
+cipher = { version = "0.4", features = ["block-padding"] }
+base64 = "0.22"
+thiserror = "1.0"

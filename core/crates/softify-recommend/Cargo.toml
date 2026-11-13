@@ -1,0 +1,10 @@
+[package]
+name = "softify-recommend"
+version = "0.1.0"
+edition = "2021"
+authors = ["Softify Team"]
+description = "Music recommendation and mix generation engine"
+
+[dependencies]
+softify-models = { path = "../softify-models" }
+softify-storage = { path = "../softify-storage" }

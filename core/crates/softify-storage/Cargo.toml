@@ -1,0 +1,13 @@
+[package]
+name = "softify-storage"
+version = "0.1.0"
+edition = "2021"
+authors = ["Softify Team"]
+description = "SQLite storage, FTS5 catalog cache, playback history, playlists, liked & muted songs"
+
+[dependencies]
+softify-models = { path = "../softify-models" }
+rusqlite = { version = "0.32", features = ["bundled"] }
+thiserror = "1.0"
+
+[dev-dependencies]
