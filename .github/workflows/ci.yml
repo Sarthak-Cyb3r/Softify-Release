@@ -69,9 +69,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
@@ -82,6 +79,8 @@ jobs:
           path: core/target/release
 
       - name: Build Desktop and Android APK
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
           chmod +x gradlew
           ./gradlew :app:compileKotlinDesktop :app:assembleRelease --stacktrace
