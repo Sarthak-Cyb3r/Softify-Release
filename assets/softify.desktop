@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Softify
+GenericName=Studio Music Player
+Comment=Studio-Grade 320 Kbps Music Player with Liquid Glassmorphism
+Exec=softify %U
+Icon=softify
+Terminal=false
+Type=Application
+Categories=AudioVideo;Audio;Player;Music;
+Keywords=Music;Audio;Stream;Player;Spotify;JioSaavn;320k;
+StartupWMClass=com-softify-app-DesktopMainKt
+MimeType=x-scheme-handler/softify;
