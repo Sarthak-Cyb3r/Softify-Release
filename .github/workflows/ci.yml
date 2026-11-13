@@ -49,7 +49,7 @@ jobs:
             cd core
             cargo build -p softify-core
             if [ -f "target/debug/libsoftify_core.so" ]; then
-              cargo run --bin uniffi-bindgen generate target/debug/libsoftify_core.so --language kotlin --out-dir target/bindings/kotlin
+              cargo run --bin uniffi-bindgen generate --library target/debug/libsoftify_core.so --language kotlin --out-dir target/bindings/kotlin
               echo "UniFFI Kotlin bindings successfully generated:"
               ls -la target/bindings/kotlin/
             fi

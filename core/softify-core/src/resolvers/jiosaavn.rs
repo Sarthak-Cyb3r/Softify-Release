@@ -36,8 +36,8 @@ pub struct JioSaavnArtistMap {
 pub struct JioSaavnMoreInfo {
     pub album: Option<String>,
     pub encrypted_media_url: Option<String>,
-    #[serde(default)]
-    pub artistMap: Option<JioSaavnArtistMap>,
+    #[serde(rename = "artistMap", default)]
+    pub artist_map: Option<JioSaavnArtistMap>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -190,7 +190,7 @@ impl JioSaavnResolver {
             // Rule: Actor Disqualification
             // Discard any entry in artistMap.artists where role == "starring"
             if let Some(more) = &song.more_info {
-                if let Some(map) = &more.artistMap {
+                if let Some(map) = &more.artist_map {
                     let has_starring = map
                         .artists
                         .iter()
@@ -256,7 +256,7 @@ impl JioSaavnResolver {
         let mut artist_names = Vec::new();
 
         if let Some(more) = &song.more_info {
-            if let Some(map) = &more.artistMap {
+            if let Some(map) = &more.artist_map {
                 for a in &map.primary_artists {
                     if let Some(name) = &a.name {
                         let trimmed = name.trim();
@@ -344,7 +344,7 @@ mod tests {
             more_info: Some(JioSaavnMoreInfo {
                 album: Some("Gym Rat".to_string()),
                 encrypted_media_url: Some("encrypted_test".to_string()),
-                artistMap: Some(JioSaavnArtistMap::default()),
+                artist_map: Some(JioSaavnArtistMap::default()),
             }),
         };
 
@@ -363,7 +363,7 @@ mod tests {
             more_info: Some(JioSaavnMoreInfo {
                 album: None,
                 encrypted_media_url: Some("enc".to_string()),
-                artistMap: Some(JioSaavnArtistMap {
+                artist_map: Some(JioSaavnArtistMap {
                     primary_artists: vec![],
                     featured_artists: vec![],
                     artists: vec![JioSaavnArtist {
@@ -401,7 +401,7 @@ mod tests {
             more_info: Some(JioSaavnMoreInfo {
                 album: Some("After Hours".to_string()),
                 encrypted_media_url: Some("valid_enc".to_string()),
-                artistMap: Some(JioSaavnArtistMap {
+                artist_map: Some(JioSaavnArtistMap {
                     primary_artists: vec![JioSaavnArtist {
                         id: Some("1".to_string()),
                         name: Some("The Weeknd".to_string()),

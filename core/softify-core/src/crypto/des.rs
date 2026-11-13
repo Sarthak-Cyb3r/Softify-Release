@@ -1,6 +1,8 @@
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine;
-use cipher::{Block, BlockDecrypt, BlockEncrypt, KeyInit};
+use cipher::{Block, BlockDecrypt, KeyInit};
+#[cfg(test)]
+use cipher::BlockEncrypt;
 use des::Des;
 
 /// DES-ECB Key for JioSaavn encrypted media URLs.
